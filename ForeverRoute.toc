@@ -1,0 +1,15 @@
+## Interface: 16001, 11601
+## Title: ForeverRoute
+## Notes: Dungeon leveling companion for WoW Forever: where to run next, runs left, dungeon quests and prerequisites, Spelunker progress, and food/tent/sleeping bag alerts.
+## Author: XOSexyCutie
+## Version: 1.0.0
+## IconTexture: Interface\Icons\INV_Misc_Map_01
+## X-License: MIT
+## X-Category: Quests & Leveling
+## SavedVariablesPerCharacter: ForeverRouteDB
+
+Data.lua
+Core.lua
+UI.lua
+Achievements.lua
+Quests.lua

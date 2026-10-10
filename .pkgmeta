@@ -1,0 +1,11 @@
+# CurseForge / BigWigs packager config (only used if you publish from a git repo).
+package-as: ForeverRoute
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - tests
+  - README.md
+  - .pkgmeta
