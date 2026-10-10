@@ -113,21 +113,28 @@ local function MentionsXP(text)
     return lower:find("experience", 1, true) or lower:find("%f[%a]xp%f[%A]") ~= nil
 end
 
--- Whether a Well Fed buff gives XP: true, false, or nil when its tooltip isn't loaded yet.
--- Only a real answer is remembered (per spell), so a tooltip that wasn't ready isn't
--- cached as "no XP".
-local foodXPBySpell = {}
+-- Whether a Well Fed buff gives XP: true, false, or nil while it's not certain yet.
+-- Buff tooltips load in pieces (name, time left, then the description), so a "no XP"
+-- read can just mean the description isn't there yet. Only "yes" is remembered right
+-- away; "no" counts as final after NO_XP_CONFIRM reads in a row (one per refresh).
+local NO_XP_CONFIRM = 5
+local foodXPBySpell, noXPReads = {}, {}
 local function FoodGivesXP(index, spellId)
     if spellId and foodXPBySpell[spellId] ~= nil then return foodXPBySpell[spellId] end
     local lines = AuraTooltipLines(index, "HELPFUL")
-    -- Line 1 is the buff's name; without a description line the tooltip isn't ready.
-    if #lines < 2 then return nil end
-    local xp = false
     for _, text in ipairs(lines) do
-        if MentionsXP(text) then xp = true break end
+        if MentionsXP(text) then
+            if spellId then foodXPBySpell[spellId], noXPReads[spellId] = true, nil end
+            return true
+        end
     end
-    if spellId then foodXPBySpell[spellId] = xp end
-    return xp
+    if not spellId then return #lines >= 3 and false or nil end
+    noXPReads[spellId] = (noXPReads[spellId] or 0) + 1
+    if noXPReads[spellId] >= NO_XP_CONFIRM then
+        foodXPBySpell[spellId] = false
+        return false
+    end
+    return nil -- not sure yet: shown as "checking" and read again on the next refresh
 end
 
 -- Auras are "secret" to addons during combat on this client, so they're only read out of
@@ -175,13 +182,16 @@ local function ScanAuras()
     return c
 end
 
+local retryPending = false
 local function RefreshAuras()
     if InCombatLockdown() then return end
     if not auraDirty and GetTime() - lastScan < 30 then return end
+    -- Re-reads of a food tooltip that wasn't certain yet are spaced 2s apart.
+    if retryPending and GetTime() - lastScan < 2 then return end
     local ok, c = pcall(ScanAuras)
     if ok and c then auraCache = c end
-    -- A food tooltip that wasn't loaded yet gets read again on the next refresh.
-    auraDirty, lastScan = (ok and c and c.retry) or false, GetTime()
+    retryPending = (ok and c and c.retry) or false
+    auraDirty, lastScan = retryPending, GetTime()
 end
 
 local function Left(exp)

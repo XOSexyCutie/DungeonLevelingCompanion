@@ -487,10 +487,32 @@ run('state.auras.HELPFUL = { { name = "Well Fed", exp = state.now + 900, tip = "
 check("'XP' wording detected", food() == "xp", food())
 # d) genuinely non-XP food
 run('state.auras.HELPFUL = { { name = "Well Fed", exp = state.now + 900, tip = "Increases Stamina and Spirit by 2.", spell = 4 } }; fire("UNIT_AURA", "player"); state.now = state.now + 1')
-check("stat-only food -> 'nonxp'", food() == "nonxp", food())
+check("stat-only food: first read -> still checking", food() == "checking", food())
+for _ in range(6):
+    run("state.now = state.now + 3"); ns.Refresh()
+check("stat-only food: after 5 spaced reads -> nonxp", food() == "nonxp", food())
 # e) /dlc buffs diagnostic
 run('SlashCmdList.DUNGEONLEVELINGCOMPANION("buffs")'); out = take("chat"); print("\n".join(out))
 check("/dlc buffs lists the buff, its spell and tooltip", any("Well Fed" in l and "spell 4" in l for l in out) and any("Stamina" in l for l in out))
+run('C_TooltipInfo = nil')
+check("no errors", not take("errors"))
+print("\nFAILURES:", fails)
+
+# --- 15. Real tooltip from the game: description arrives after the time-left line ---
+run('C_TooltipInfo = { GetUnitAura = function(u, i, f) local a = state.auras[f][i] if not a then return nil end '
+    'local lines = { { leftText = a.name } } '
+    'if state.descReady then table.insert(lines, { leftText = a.tip }) end '
+    'table.insert(lines, { leftText = "59 min remaining" }) return { lines = lines } end }')
+run('state.descReady = false; state.auras.HELPFUL = { { name = "Well Fed", exp = state.now + 3600, '
+    'tip = "Your Strength is increased by 1. Experience gained from kills increased by 5%.", spell = 1248422 } }; '
+    'fire("UNIT_AURA", "player"); state.now = state.now + 1')
+check("name + time-left only -> 'checking' (not cached as no XP)", food() == "checking", food())
+for _ in range(10):  # lots of refreshes within one second must not 'confirm' no-XP
+    ns.Refresh(); ns.CheckWarnings()
+check("rapid refreshes don't confirm 'no XP'", food() == "checking", food())
+run('state.descReady = true; state.now = state.now + 3'); ns.Refresh()
+check("Roasted Boar Meat tooltip -> XP food", food() == "xp", food())
+check("no 'no bonus XP' alert during all this", not any("no bonus XP" in w for w in take("warnings")))
 run('C_TooltipInfo = nil')
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
