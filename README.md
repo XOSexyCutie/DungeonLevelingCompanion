@@ -73,4 +73,4 @@ Dungeon keys for commands: `hot rfc dm wc rol sfk bfd stocks rfk exc gnomer smgy
 
 ## Feedback & bug reports
 
-Found a bug, a quest that never updates, or have measured XP numbers for a dungeon? Please open an issue on GitHub: **https://github.com/XOSexyCutie/foreverroute/issues** — or leave a comment here. Include the exact quest/dungeon name and any error text.
+Found a bug, a quest that never updates, or have measured XP numbers for a dungeon? Please open an issue on GitHub: **https://github.com/XOSexyCutie/DungeonLevelingCompanion/issues** — or leave a comment here. Include the exact quest/dungeon name and any error text.
