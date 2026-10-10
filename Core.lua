@@ -45,13 +45,18 @@ local function InitDB()
     end
     S = DB.settings
     ns.DB, ns.S = DB, S
+    S.warnMinLevel = nil -- moved to the account-wide settings below
+
+    -- Account-wide settings (shared by all your characters).
+    ForeverRouteGlobalDB = ForeverRouteGlobalDB or {}
+    local G = ForeverRouteGlobalDB
+    if G.warnMinLevel == nil then G.warnMinLevel = 6 end -- no alerts below this level
+    ns.GDB = G
 end
 
 ---------------------------------------------------------------------------
 -- Auras
 ---------------------------------------------------------------------------
-local scanTip = CreateFrame("GameTooltip", "ForeverRouteScanTip", nil, "GameTooltipTemplate")
-
 local function GetAura(index, filter)
     if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
         local a = C_UnitAuras.GetAuraDataByIndex("player", index, filter)
@@ -62,7 +67,22 @@ local function GetAura(index, filter)
     return name, expires, spellId, count
 end
 
+-- Reads an aura's tooltip text. Prefers the data-only C_TooltipInfo API: a real tooltip
+-- frame runs shared Blizzard tooltip code from our (addon) context, which can taint it.
+-- The hidden tooltip is only a fallback for clients without C_TooltipInfo.
+local scanTip
 local function AuraTooltipMentions(index, filter, needle)
+    if C_TooltipInfo and C_TooltipInfo.GetUnitAura then
+        local data = C_TooltipInfo.GetUnitAura("player", index, filter)
+        for _, line in ipairs(data and data.lines or {}) do
+            local text = line.leftText
+            if type(text) == "string" and text:lower():find(needle, 1, true) then return true end
+        end
+        return false
+    end
+    if not scanTip then
+        scanTip = CreateFrame("GameTooltip", "ForeverRouteScanTip", nil, "GameTooltipTemplate")
+    end
     scanTip:SetOwner(WorldFrame, "ANCHOR_NONE")
     scanTip:ClearLines()
     scanTip:SetUnitAura("player", index, filter)
@@ -76,6 +96,15 @@ local function AuraTooltipMentions(index, filter, needle)
     return false
 end
 
+-- Whether a Well Fed buff gives XP, remembered per spell so each food's tooltip is read once.
+local foodXPBySpell = {}
+local function FoodGivesXP(index, spellId)
+    if spellId and foodXPBySpell[spellId] ~= nil then return foodXPBySpell[spellId] end
+    local xp = AuraTooltipMentions(index, "HELPFUL", "experience")
+    if spellId then foodXPBySpell[spellId] = xp end
+    return xp
+end
+
 -- Auras are "secret" to addons during combat on this client, so they're only read out of
 -- combat (and inside pcall). They're re-read only when UNIT_AURA says your buffs changed
 -- (plus a slow 30s safety refresh). In combat, the last values read are used.
@@ -87,7 +116,7 @@ function ns.MarkAurasDirty() auraDirty = true end
 local function ScanAuras()
     local c = { food = "none", tentCd = false, bagStacks = 0 }
     for i = 1, 40 do
-        local name, expires, _, count = GetAura(i, "HELPFUL")
+        local name, expires, spellId, count = GetAura(i, "HELPFUL")
         if not name then break end
         local lower = name:lower()
         local exp = (expires and expires > 0) and expires or nil
@@ -98,7 +127,7 @@ local function ScanAuras()
             c.tentCd, c.tentExp = true, exp
         elseif lower:find("well fed", 1, true) and c.food ~= "xp" then
             -- Only Well Fed buffs get the (slower) tooltip check for the XP bonus.
-            if AuraTooltipMentions(i, "HELPFUL", "experience") then
+            if FoodGivesXP(i, spellId) then
                 c.food, c.foodExp = "xp", exp
             else
                 c.food, c.foodExp = "nonxp", exp
@@ -514,17 +543,46 @@ end
 local lastFoodWarn, lastTentWarn, lastBagWarn, foodExpireWarned, hadBoostedRest, wasInDungeon = 0, 0, 0, nil, nil, false
 local tentPending = false
 
-local function Warn(msg)
-    if RaidNotice_AddMessage and RaidWarningFrame then
-        RaidNotice_AddMessage(RaidWarningFrame, msg, ChatTypeInfo["RAID_WARNING"])
+-- Our own big on-screen alert text. We deliberately don't use Blizzard's RaidWarningFrame:
+-- calling Blizzard UI code from an addon taints it, and that taint spread into Blizzard's
+-- health code ("secret number" errors).
+local alertFrame, alertText
+local function ShowAlert(msg)
+    if not alertFrame then
+        alertFrame = CreateFrame("Frame", "ForeverRouteAlert", UIParent)
+        alertFrame:SetSize(800, 40)
+        alertFrame:SetPoint("TOP", UIParent, "TOP", 0, -180)
+        alertFrame:SetFrameStrata("HIGH")
+        alertText = alertFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+        alertText:SetAllPoints()
+        alertText:SetTextColor(1, 0.35, 0.35)
+        alertFrame:SetScript("OnUpdate", function(self)
+            local left = (self.hideAt or 0) - GetTime()
+            if left <= 0 then self:Hide() return end
+            self:SetAlpha(math.min(1, left)) -- fade out over the last second
+        end)
     end
+    alertText:SetText(msg)
+    alertFrame.hideAt = GetTime() + 5
+    alertFrame:SetAlpha(1)
+    alertFrame:Show()
+end
+
+local function Warn(msg)
+    ShowAlert(msg)
     if PlaySound and SOUNDKIT and SOUNDKIT.RAID_WARNING then PlaySound(SOUNDKIT.RAID_WARNING) end
     Print("|cffff5555" .. msg .. "|r")
+    if ns.alertLog then table.insert(ns.alertLog, msg) end -- for the test suite
 end
 
 local function CheckWarnings()
     if not S then return end
-    if UnitLevel("player") >= MAX_LEVEL or UnitIsDeadOrGhost("player") or UnitOnTaxi("player") then return end
+    local lvl = UnitLevel("player")
+    if lvl >= MAX_LEVEL or lvl < (ns.GDB and ns.GDB.warnMinLevel or 6) then return end
+    if UnitIsDeadOrGhost("player") or UnitOnTaxi("player") then return end
+    -- Not during cinematics or with the UI hidden.
+    if (InCinematic and InCinematic()) or (IsInCinematicScene and IsInCinematicScene())
+        or (UIParent and not UIParent:IsVisible()) then return end
     local now = GetTime()
     local inCombat = InCombatLockdown()
 

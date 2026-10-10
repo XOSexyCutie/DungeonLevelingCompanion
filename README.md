@@ -33,7 +33,7 @@ Built for WoW Forever's dungeon-leveling meta: the new Forever dungeons, the Spe
 - **Food:** warns when your Well Fed XP buff is missing, about to expire, or from food without the XP bonus.
 - **Camp tent:** warns when the Boosted Rest cooldown is over — only when you can actually camp (outdoors, outside dungeons, cities and inns) and right after you leave a dungeon.
 - **Cozy Sleeping Bag:** warns when Well-Rested is gone and the bag is off cooldown.
-- No alerts in combat.
+- No alerts in combat, during cinematics, or below level 6 (configurable once for your whole account with `/fr set minlevel`).
 
 ---
 
@@ -51,6 +51,7 @@ Built for WoW Forever's dungeon-leveling meta: the new Forever dungeons, the Spe
 | `/fr ach` | What was read from the Spelunker achievements |
 | `/fr set food\|tentwarn\|tent\|bag on\|off` | Turn alerts / tent estimates on or off |
 | `/fr set calib <n\|auto>` | Force an XP calibration factor |
+| `/fr set minlevel <level>` | Level the alerts start at (default 6; applies to all your characters) |
 | `/fr faction horde\|alliance\|auto` | Pick the route |
 | `/fr lock` / `/fr unlock` | Lock the panel position |
 | `/fr perf` | How much time/memory the addon uses |

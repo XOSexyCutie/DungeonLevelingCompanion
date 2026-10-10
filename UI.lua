@@ -273,8 +273,11 @@ local function SetSetting(key, value)
     elseif key == "calib" then
         S.calibOverride = tonumber(value)
         Print(S.calibOverride and ("Calibration forced to %.2f."):format(S.calibOverride) or "Calibration back to auto.")
+    elseif key == "minlevel" and tonumber(value) then
+        ns.GDB.warnMinLevel = tonumber(value)
+        Print(("Alerts start at level %d on all your characters."):format(ns.GDB.warnMinLevel))
     else
-        Print("Usage: /fr set food|tentwarn|tent|bag on|off, or /fr set calib <number|auto>")
+        Print("Usage: /fr set food|tentwarn|tent|bag on|off, /fr set calib <number|auto>, /fr set minlevel <level>")
     end
     ns.Refresh()
 end
@@ -291,7 +294,7 @@ local HELP = {
     "/fr undo - remove the last logged run",
     "/fr ach - show what was read from the Spelunker achievements",
     "/fr perf - how much time/memory the addon uses",
-    "/fr set food|tentwarn|tent|bag on|off  -  /fr set calib <n|auto>",
+    "/fr set food|tentwarn|tent|bag on|off  -  /fr set calib <n|auto>  -  /fr set minlevel <n>",
     "/fr lock | unlock - lock window position",
     "/fr faction horde|alliance|auto - pick the route (auto = your character)",
     "/fr reset confirm - wipe this character's data",

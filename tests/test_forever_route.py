@@ -88,7 +88,9 @@ local function newFrame(name)
   return f
 end
 function CreateFrame(kind, name) local f = newFrame(name) table.insert(state.frames, f) return f end
-UIParent, WorldFrame = {}, {}
+UIParent = { IsVisible = function() return state.uiVisible ~= false end }
+WorldFrame = {}
+function InCinematic() return state.cinematic == true end
 DEFAULT_CHAT_FRAME = { AddMessage = function(self, m) table.insert(state.chat, m) end }
 RaidWarningFrame = {}
 ChatTypeInfo = { RAID_WARNING = {} }
@@ -132,10 +134,13 @@ for fname in ["Data.lua", "Core.lua", "UI.lua", "Achievements.lua", "Quests.lua"
     lua.eval(f"function(code) return assert(loadstring(code, '@{fname}')) end")(code)("ForeverRoute", ns)
 
 G = lua.globals()
+ns.alertLog = lua.table()
 run = lua.execute
 run('fire("ADDON_LOADED", "ForeverRoute"); fire("PLAYER_ENTERING_WORLD"); tick()')
 
 def take(key):
+    if key == "warnings":
+        out = list(ns.alertLog.values()); ns.alertLog = lua.table(); return out
     out = list(G.state[key].values()); run(f"state.{key} = {{}}"); return out
 fails = 0
 def check(label, cond, extra=""):
@@ -407,5 +412,52 @@ fs = ns.FoodStatus(); fs = fs if isinstance(fs, str) else fs[0]
 check("food still detected (only Well Fed tooltip read)", fs == "xp", fs)
 run('SlashCmdList.FOREVERROUTE("perf")'); out = take("chat"); print("\n".join(out))
 check("/fr perf reports", any("ms each" in l for l in out))
+check("no errors", not take("errors"))
+print("\nFAILURES:", fails)
+
+# --- 12. Taint safety: no Blizzard raid-warning frame, no alerts at low level / in cinematics ---
+run('state.raidNoticeCalls = 0; RaidNotice_AddMessage = function() state.raidNoticeCalls = state.raidNoticeCalls + 1 end')
+run('SlashCmdList.FOREVERROUTE("set food on"); SlashCmdList.FOREVERROUTE("set tentwarn on")'); take("chat")
+run('state.auras.HELPFUL = {}; state.auras.HARMFUL = {}; state.rested = 0; state.indoors = false; state.resting = false; state.combat = false')
+run('state.level = 1; state.xp = 0; state.now = state.now + 1000; tick()')
+check("level 1: no alerts", not take("warnings"))
+run('state.level = 20; state.cinematic = true; state.now = state.now + 1000; tick()')
+check("in a cinematic: no alerts", not take("warnings"))
+run('state.cinematic = false; state.uiVisible = false; state.now = state.now + 1000; tick()')
+check("UI hidden: no alerts", not take("warnings"))
+run('state.uiVisible = true; state.now = state.now + 1000; tick()')
+w = take("warnings")
+check("level 20, normal UI: alerts fire", any("Well Fed" in x for x in w), w)
+check("Blizzard RaidNotice_AddMessage never called", G.state.raidNoticeCalls == 0, G.state.raidNoticeCalls)
+run('SlashCmdList.FOREVERROUTE("set minlevel 25")'); take("chat")
+run('state.now = state.now + 1000; tick()')
+check("/fr set minlevel 25 -> no alerts at 20", not take("warnings"))
+run('SlashCmdList.FOREVERROUTE("set minlevel 10")'); take("chat")
+# data-only tooltip API path
+run('state.tipFrames = 0; local cf = CreateFrame; CreateFrame = function(kind, ...) if kind == "GameTooltip" then state.tipFrames = state.tipFrames + 1 end return cf(kind, ...) end')
+run('C_TooltipInfo = { GetUnitAura = function(unit, i, filter) local a = state.auras[filter][i] return a and { lines = { { leftText = a.name }, { leftText = a.tip } } } end }')
+run('state.auras.HELPFUL = { { name = "Well Fed", exp = state.now + 900, tip = "Increases experience gained from kills by 5%.", spell = 99 } }; fire("UNIT_AURA", "player"); state.now = state.now + 1')
+fs = ns.FoodStatus(); fs = fs if isinstance(fs, str) else fs[0]
+check("food XP read via C_TooltipInfo", fs == "xp", fs)
+check("no hidden tooltip frame created when C_TooltipInfo exists", G.state.tipFrames == 0, G.state.tipFrames)
+run('C_TooltipInfo = nil')
+check("no errors", not take("errors"))
+print("\nFAILURES:", fails)
+
+# --- 13. Account-wide alert start level (default 4) ---
+run('ForeverRouteGlobalDB = nil; ns_init = 1'); ns.InitDB(); take("chat")
+check("default alert start level is 6", G.ForeverRouteGlobalDB.warnMinLevel == 6, G.ForeverRouteGlobalDB.warnMinLevel)
+run('state.auras.HELPFUL = {}; state.auras.HARMFUL = {}; state.combat = false; state.level = 5; state.now = state.now + 1000; tick()')
+check("level 5: no alerts", not take("warnings"))
+run('state.level = 6; state.now = state.now + 1000; tick()')
+check("level 6: alerts start", len(take("warnings")) > 0)
+run('SlashCmdList.FOREVERROUTE("set minlevel 8")'); out = take("chat")
+check("/fr set minlevel says all characters", any("all your characters" in l for l in out), out)
+# "log in" a different character: per-character data is new, account-wide setting stays
+run('ForeverRouteDB = nil'); ns.InitDB()
+check("new character keeps account-wide minlevel 8", G.ForeverRouteGlobalDB.warnMinLevel == 8 and G.ForeverRouteDB.runs is not None and len(list(G.ForeverRouteDB.runs.keys())) == 0)
+check("per-character settings don't carry warnMinLevel", G.ForeverRouteDB.settings.warnMinLevel is None)
+run('state.level = 6; state.now = state.now + 1000; tick()')
+check("level 6 with minlevel 8: no alerts", not take("warnings"))
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
