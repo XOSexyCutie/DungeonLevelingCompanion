@@ -1,4 +1,4 @@
-local _, ns = ...
+local ADDON, ns = ...
 
 local Print = ns.Print
 local frame, text
@@ -30,7 +30,7 @@ local function AddQuestLines(lines, d)
     table.insert(lines, ("Quests (%d left):"):format(#quests))
     for i, q in ipairs(quests) do
         if i > MAX_QUEST_LINES then
-            table.insert(lines, ("  %s+%d more - /fr quests|r"):format(GREY, #quests - MAX_QUEST_LINES))
+            table.insert(lines, ("  %s+%d more - /dlc quests|r"):format(GREY, #quests - MAX_QUEST_LINES))
             break
         end
         table.insert(lines, QuestLine(q))
@@ -184,7 +184,7 @@ end
 
 function ns.CreateUI()
     local S, DB = ns.S, ns.DB
-    frame = CreateFrame("Frame", "ForeverRouteFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    frame = CreateFrame("Frame", "DungeonLevelingCompanionFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame:SetSize(290, 120)
     frame:SetFrameStrata("MEDIUM")
     frame:SetClampedToScreen(true)
@@ -214,7 +214,7 @@ function ns.CreateUI()
 
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOPLEFT", 10, -8)
-    title:SetText("ForeverRoute")
+    title:SetText("DLC - Dungeon Leveling Companion")
 
     text = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     text:SetPoint("TOPLEFT", 10, -26)
@@ -244,7 +244,7 @@ local function ListRoute()
 end
 
 local function ShowPrep(d)
-    if not d then Print("Unknown dungeon. Try /fr route for the keys.") return end
+    if not d then Print("Unknown dungeon. Try /dlc route for the keys.") return end
     if not d.prep or #d.prep == 0 then Print(d.name .. ": no prerequisite quests.") return end
     local steps, open = ns.PrepSteps(d), ns.PrepOpen(d)
     local xp, min = ns.PrepLeft(d)
@@ -257,7 +257,7 @@ local function ShowPrep(d)
 end
 
 local function ShowQuests(d)
-    if not d then Print("Unknown dungeon. Try /fr route for the keys.") return end
+    if not d then Print("Unknown dungeon. Try /dlc route for the keys.") return end
     local quests = ns.DungeonQuests(d)
     Print(("%s - %d quest%s left:"):format(d.name, #quests, #quests == 1 and "" or "s"))
     for _, q in ipairs(quests) do Print(QuestLine(q)) end
@@ -277,40 +277,40 @@ local function SetSetting(key, value)
         ns.GDB.warnMinLevel = tonumber(value)
         Print(("Alerts start at level %d on all your characters."):format(ns.GDB.warnMinLevel))
     else
-        Print("Usage: /fr set food|tentwarn|tent|bag on|off, /fr set calib <number|auto>, /fr set minlevel <level>")
+        Print("Usage: /dlc set food|tentwarn|tent|bag on|off, /dlc set calib <number|auto>, /dlc set minlevel <level>")
     end
     ns.Refresh()
 end
 
 local HELP = {
-    "/fr - show/hide the window",
-    "/fr route - full route with runs done",
-    "/fr quests [dungeon] - quests for the current (or named) dungeon",
-    "/fr prep [dungeon] - prerequisite quest steps for the next (or named) dungeon",
-    "/fr qdone <quest> | qundo <quest> - mark a quest or prereq step finished (or not) by hand",
-    "/fr run <dungeon> - log a run by hand (no XP)",
-    "/fr xp <dungeon> <amount> - log a run with measured trash XP",
-    "/fr assign <dungeon> - assign the last unrecognised run",
-    "/fr undo - remove the last logged run",
-    "/fr ach - show what was read from the Spelunker achievements",
-    "/fr perf - how much time/memory the addon uses",
-    "/fr set food|tentwarn|tent|bag on|off  -  /fr set calib <n|auto>  -  /fr set minlevel <n>",
-    "/fr lock | unlock - lock window position",
-    "/fr faction horde|alliance|auto - pick the route (auto = your character)",
-    "/fr reset confirm - wipe this character's data",
+    "/dlc - show/hide the window",
+    "/dlc route - full route with runs done",
+    "/dlc quests [dungeon] - quests for the current (or named) dungeon",
+    "/dlc prep [dungeon] - prerequisite quest steps for the next (or named) dungeon",
+    "/dlc qdone <quest> | qundo <quest> - mark a quest or prereq step finished (or not) by hand",
+    "/dlc run <dungeon> - log a run by hand (no XP)",
+    "/dlc xp <dungeon> <amount> - log a run with measured trash XP",
+    "/dlc assign <dungeon> - assign the last unrecognised run",
+    "/dlc undo - remove the last logged run",
+    "/dlc ach - show what was read from the Spelunker achievements",
+    "/dlc perf - how much time/memory the addon uses",
+    "/dlc set food|tentwarn|tent|bag on|off  -  /dlc set calib <n|auto>  -  /dlc set minlevel <n>",
+    "/dlc lock | unlock - lock window position",
+    "/dlc faction horde|alliance|auto - pick the route (auto = your character)",
+    "/dlc reset confirm - wipe this character's data",
     "Runs are logged automatically when you leave a dungeon.",
 }
 
 local function ShowHelp()
     local meta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-    local version = meta and meta("ForeverRoute", "Version") or "?"
+    local version = meta and meta(ADDON, "Version") or "?"
     Print(("v%s (%s route) - commands:"):format(version, ns.faction or "?"))
     for _, l in ipairs(HELP) do Print(l) end
 end
 
-SLASH_FOREVERROUTE1 = "/fr"
-SLASH_FOREVERROUTE2 = "/foreverroute"
-SlashCmdList.FOREVERROUTE = function(input)
+SLASH_DUNGEONLEVELINGCOMPANION1 = "/dlc"
+SLASH_DUNGEONLEVELINGCOMPANION2 = "/dungeonleveling"
+SlashCmdList.DUNGEONLEVELINGCOMPANION = function(input)
     local DB, S = ns.DB, ns.S
     local cmd, rest = (input or ""):match("^%s*(%S*)%s*(.-)%s*$")
     cmd = cmd:lower()
@@ -342,7 +342,7 @@ SlashCmdList.FOREVERROUTE = function(input)
     elseif cmd == "xp" then
         local name, amount = rest:match("^(.-)%s+(%d+)$")
         local d = ns.FindDungeon(name)
-        if d and amount then ns.RecordRun(d, tonumber(amount), UnitLevel("player")) else Print("Usage: /fr xp <dungeon> <amount>") end
+        if d and amount then ns.RecordRun(d, tonumber(amount), UnitLevel("player")) else Print("Usage: /dlc xp <dungeon> <amount>") end
     elseif cmd == "assign" then
         local d = ns.FindDungeon(rest)
         if not DB.pending then Print("No unassigned run.")
@@ -365,7 +365,7 @@ SlashCmdList.FOREVERROUTE = function(input)
         local mem = (C_AddOns and C_AddOns.GetAddOnMemoryUsage) or GetAddOnMemoryUsage
         if update and mem then
             update()
-            Print(("Memory: %.0f KB."):format(mem("ForeverRoute") or 0))
+            Print(("Memory: %.0f KB."):format(mem(ADDON) or 0))
         end
     elseif cmd == "faction" then
         local f = rest:lower()
@@ -384,7 +384,7 @@ SlashCmdList.FOREVERROUTE = function(input)
             Print("Data wiped for this character.")
             ns.Refresh()
         else
-            Print("This wipes all logged runs for this character. Type /fr reset confirm to do it.")
+            Print("This wipes all logged runs for this character. Type /dlc reset confirm to do it.")
         end
     else
         ShowHelp()

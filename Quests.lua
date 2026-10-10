@@ -159,7 +159,7 @@ function ns.DungeonQuests(d)
     return out
 end
 
--- How many of d's quests still give XP. Finished quests (tracked or /fr qdone) don't count.
+-- How many of d's quests still give XP. Finished quests (tracked or /dlc qdone) don't count.
 -- Dungeons whose quests aren't known yet (TBD) count their estimate until the first run.
 function ns.QuestsLeft(d)
     if d.questPlaceholder and #(d.questInfo or {}) == 0 then
@@ -244,12 +244,12 @@ function ns.PrepLeft(d)
     return xp, min
 end
 
--- /fr qdone <quest> and /fr qundo <quest>: mark a quest or prep step finished by hand.
+-- /dlc qdone <quest> and /dlc qundo <quest>: mark a quest or prep step finished by hand.
 function ns.MarkQuest(text, done)
     local DB = ns.DB
     DB.questDone = DB.questDone or {}
     local want = Key(text)
-    if want == "" then ns.Print("Usage: /fr qdone <part of quest name>") return end
+    if want == "" then ns.Print("Usage: /dlc qdone <part of quest name>") return end
     local function mark(key, name)
         DB.questDone[key] = done and "manual" or nil
         ns.Print(("%s marked %s."):format(name, done and "finished" or "not finished"))

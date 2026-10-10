@@ -1,6 +1,6 @@
-"""ForeverRoute test suite: runs the addon in Lua 5.1 against a fake WoW API (secret auras in combat, quest log, achievements).
+"""DLC (Dungeon Leveling Companion) test suite: runs the addon in Lua 5.1 against a fake WoW API (secret auras in combat, quest log, achievements).
 
-Run from the addon folder:  python tests/test_forever_route.py   (needs: pip install lupa)
+Run from the addon folder:  python tests/test_dlc.py   (needs: pip install lupa)
 """
 import sys, pathlib
 from lupa.lua51 import LuaRuntime
@@ -14,7 +14,7 @@ XPT = { 400, 900, 1400, 2100, 2800, 3600, 4500, 5400, 6500, 7600, 8800, 10100, 1
 state = { level = 18, xp = 1000, rested = 0, now = 1000, t = 100000, inInstance = false, instName = nil, subzone = "",
           auras = { HELPFUL = {}, HARMFUL = {} }, combat = false, indoors = false, resting = false,
           warnings = {}, chat = {}, errors = {}, frames = {}, bag = nil, bagCdStart = 0 }
-local function secretCheck() if state.combat then error("GetAuraDataByIndex(): Auras cannot be accessed when secret while tainted by 'ForeverRoute'") end end
+local function secretCheck() if state.combat then error("GetAuraDataByIndex(): Auras cannot be accessed when secret while tainted by 'DungeonLevelingCompanion'") end end
 function GetTime() return state.now end
 function time() return state.t end
 function UnitLevel() return state.level end
@@ -131,12 +131,12 @@ end
 ns = lua.table()
 for fname in ["Data.lua", "Core.lua", "UI.lua", "Achievements.lua", "Quests.lua"]:
     code = (ADDON_DIR / fname).read_text(encoding="utf-8")
-    lua.eval(f"function(code) return assert(loadstring(code, '@{fname}')) end")(code)("ForeverRoute", ns)
+    lua.eval(f"function(code) return assert(loadstring(code, '@{fname}')) end")(code)("DungeonLevelingCompanion", ns)
 
 G = lua.globals()
 ns.alertLog = lua.table()
 run = lua.execute
-run('fire("ADDON_LOADED", "ForeverRoute"); fire("PLAYER_ENTERING_WORLD"); tick()')
+run('fire("ADDON_LOADED", "DungeonLevelingCompanion"); fire("PLAYER_ENTERING_WORLD"); tick()')
 
 def take(key):
     if key == "warnings":
@@ -184,20 +184,20 @@ run('state.combat = true; kill(100, 0); kill(200, 200); state.combat = false')  
 run('state.rested = state.rested + 900; fire("UPDATE_EXHAUSTION")')               # (tent-like rested gain) must not count
 run('kill(120, 120)')            # +120
 run('quest(1500)')               # quest XP inside -> excluded
-print("   run xp so far:", G.ForeverRouteDB.curRun.xp)
-check("run XP = kill XP minus rested minus quest", G.ForeverRouteDB.curRun.xp == 570, G.ForeverRouteDB.curRun.xp)
+print("   run xp so far:", G.DungeonLevelingCompanionDB.curRun.xp)
+check("run XP = kill XP minus rested minus quest", G.DungeonLevelingCompanionDB.curRun.xp == 570, G.DungeonLevelingCompanionDB.curRun.xp)
 
 # level-up in the middle of the run
 run('state.xp = XPT[state.level] - 100; fire("PLAYER_XP_UPDATE", "player")')   # simulate time passing outside tracking? no: counts
-before = G.ForeverRouteDB.curRun.xp
+before = G.DungeonLevelingCompanionDB.curRun.xp
 run('kill(400, 0)')
 lvl = G.state.level
-check("level-up mid-run counted correctly (+400)", G.ForeverRouteDB.curRun.xp - before == 400 and lvl == 19, (G.ForeverRouteDB.curRun.xp - before, lvl))
+check("level-up mid-run counted correctly (+400)", G.DungeonLevelingCompanionDB.curRun.xp - before == 400 and lvl == 19, (G.DungeonLevelingCompanionDB.curRun.xp - before, lvl))
 # level/XP updating out of order on level-up
-before = G.ForeverRouteDB.curRun.xp
+before = G.DungeonLevelingCompanionDB.curRun.xp
 run('state.xp = state.xp + 50; local oldlvl = state.level; fire("PLAYER_XP_UPDATE", "player")')
 run('state.xp = XPT[state.level] + 10 - 0')  # bogus intermediate not fired
-check("normal +50", G.ForeverRouteDB.curRun.xp - before == 50, G.ForeverRouteDB.curRun.xp - before)
+check("normal +50", G.DungeonLevelingCompanionDB.curRun.xp - before == 50, G.DungeonLevelingCompanionDB.curRun.xp - before)
 
 # leave + finish run -> logged
 run('state.xp = 100; fire("PLAYER_XP_UPDATE", "player")')
@@ -205,7 +205,7 @@ take("chat")
 run('state.t = state.t + 2400; state.inInstance = false; state.instName = nil; fire("ZONE_CHANGED_NEW_AREA"); state.t = state.t + 400; tick()')
 logged = take("chat")
 check("run logged on leaving", any("Logged The Deadmines run" in m for m in logged), logged[:1])
-print("   measured dm:", list(G.ForeverRouteDB.measured.dm.values()))
+print("   measured dm:", list(G.DungeonLevelingCompanionDB.measured.dm.values()))
 
 # --- 3. Warnings: outdoors / rest area / dungeon ---
 run('state.level = 22; state.xp = 0; state.rested = 0; state.auras.HARMFUL = {}; state.now = state.now + 500; state.resting = true; tick()')
@@ -221,7 +221,7 @@ w = take("warnings")
 check("food warning after combat once auras readable", any("Well Fed" in x for x in w), w)
 
 # --- 4. Achievements ---
-run('ForeverRouteDB.achIDs = nil'); ok = ns.ScanAchievements()
+run('DungeonLevelingCompanionDB.achIDs = nil'); ok = ns.ScanAchievements()
 check("achievements read", ok and ns.TierProgress("Novice")[0] == 6, ns.TierProgress("Novice"))
 run('state.combat = true; fire("CRITERIA_UPDATE"); tick(); tick()')
 check("achievement rescan deferred in combat, no errors", not take("errors"))
@@ -268,10 +268,10 @@ check("prereq chain part turned in -> dungeon quest still listed (final part not
 run('table.insert(state.questLog, { title = "The Defias Brotherhood", id = 166, complete = false })'); qlog()
 check("final part (166) picked up -> shown yellow (in log)", any("Defias Brotherhood" in l and "cffffff00" in l for l in panel_quests()))
 # quest finished before install: learned ID + flagged -> hidden on its own
-run('ForeverRouteDB.questIDs["collectingmemories"] = 168; state.flagged[168] = true'); qlog()
+run('DungeonLevelingCompanionDB.questIDs["collectingmemories"] = 168; state.flagged[168] = true'); qlog()
 check("flagged-completed (learned id) hidden", not any("Collecting Memories" in l for l in panel_quests()))
 # manual qdone
-run('SlashCmdList.FOREVERROUTE("qdone underground")'); take("chat")
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("qdone underground")'); take("chat")
 check("/fr qdone hides quest", not any("Underground Assault" in l for l in panel_quests()))
 # paladin-only quest
 run('state.level = 21'); 
@@ -282,12 +282,12 @@ run('state.class = "HUNTER"')
 # combat safety
 run('state.combat = true; fire("QUEST_LOG_UPDATE"); tick()'); ns.Refresh(); run('state.combat = false')
 check("no errors from quest tracking", not take("errors"))
-run('SlashCmdList.FOREVERROUTE("quests dm")'); print("\n".join(take("chat")))
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("quests dm")'); print("\n".join(take("chat")))
 print("\nFAILURES:", fails)
 
 # --- 7. Prerequisite steps + swap timing ---
-run('SlashCmdList.FOREVERROUTE("reset confirm"); state.questLog = {}; state.flagged = {}; ForeverRouteDB.questDone = {}; ForeverRouteDB.questIDs = {}')
-run('ForeverRouteDB.achDone = {}'); take("chat")
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("reset confirm"); state.questLog = {}; state.flagged = {}; DungeonLevelingCompanionDB.questDone = {}; DungeonLevelingCompanionDB.questIDs = {}')
+run('DungeonLevelingCompanionDB.achDone = {}'); take("chat")
 run('state.level = 15; state.xp = 0'); qlog()
 def panel(): ns.Refresh(); return G.state.lastText.split("\n")
 p = panel()
@@ -298,7 +298,7 @@ run('state.flagged[0] = false')
 run('state.questLog = { { title = "Old Ironforge Incursion", id = 9100, complete = false } }'); qlog()
 check("unlock in log -> Nip 'Em step done", not any("Nip 'Em in the Bud" in l for l in panel()))
 # level 16 in HoT leg: next = Deadmines prep should show (lvl >= 17-2)
-run('state.level = 16; state.xp = 0; ForeverRouteDB.runs.hot = 2'); qlog()
+run('state.level = 16; state.xp = 0; DungeonLevelingCompanionDB.runs.hot = 2'); qlog()
 p = panel(); print("\n".join(p[:12]))
 check("Prep for The Deadmines shown near swap", any("Prep for The Deadmines" in l for l in p))
 check("Defias chain step shows part 1/6", any("The Defias Brotherhood" in l and "1/6" not in l for l in p) or True)
@@ -319,14 +319,14 @@ run('for _, id in ipairs({135,141,142,155}) do state.flagged[id] = true end; sta
 p = panel()
 check("chain done -> DM prep disappears", not any("Prep for The Deadmines" in l and "Defias" in l for l in p) and not any("(part" in l for l in p))
 # Excavation: unlock by Horrors in the Highland in log completes 3 Rethiel steps
-run('state.level = 26; state.xp = 0; ForeverRouteDB.runs.rfk = 1; state.questLog = { { title = "Horrors in the Highland", id = 9200, complete = false } }'); qlog()
+run('state.level = 26; state.xp = 0; DungeonLevelingCompanionDB.runs.rfk = 1; state.questLog = { { title = "Horrors in the Highland", id = 9200, complete = false } }'); qlog()
 steps = [s.step.q for s in ns.PrepOpen(ns.BY_KEY.exc).values()]
 check("Excavation: Rethiel prereqs done when Horrors in the Highland is in log", steps == ["Young Crocolisk Skins"], steps)
 # manual qdone of a prep step
-run('SlashCmdList.FOREVERROUTE("qdone young croc")'); take("chat")
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("qdone young croc")'); take("chat")
 check("/fr qdone marks a prep step done", len(list(ns.PrepOpen(ns.BY_KEY.exc).values())) == 0)
 # /fr prep output
-run('SlashCmdList.FOREVERROUTE("prep st")'); out = take("chat"); print("\n".join(out[:4]))
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("prep st")'); out = take("chat"); print("\n".join(out[:4]))
 check("/fr prep lists steps", any("Sunken Temple prerequisites" in l for l in out))
 # optional steps excluded from XP
 xp_st, _ = ns.PrepLeft(ns.BY_KEY.st); xp_zf, _ = ns.PrepLeft(ns.BY_KEY.zf)
@@ -335,20 +335,20 @@ check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
 
 # --- 8. Finished quests don't count toward run XP ---
-run('SlashCmdList.FOREVERROUTE("reset confirm"); state.questLog = {}; state.flagged = {}; ForeverRouteDB.questDone = {}; ForeverRouteDB.questIDs = {}'); take("chat")
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("reset confirm"); state.questLog = {}; state.flagged = {}; DungeonLevelingCompanionDB.questDone = {}; DungeonLevelingCompanionDB.questIDs = {}'); take("chat")
 run('state.level = 22; state.xp = 0'); qlog()
 bfd = ns.BY_KEY.bfd
 q_all = ns.QuestXP(bfd); n_all = ns.QuestsLeft(bfd)
 run('state.flagged[971] = true; state.flagged[1275] = true'); qlog()
 q_two = ns.QuestXP(bfd); n_two = ns.QuestsLeft(bfd)
 check("2 of 4 BFD quests done -> half the quest XP", n_all == 4 and n_two == 2 and abs(q_two - q_all / 2) < 1, (n_all, n_two, q_all, q_two))
-run('SlashCmdList.FOREVERROUTE("qdone twilight falls"); SlashCmdList.FOREVERROUTE("qdone villainy")'); take("chat")
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("qdone twilight falls"); SlashCmdList.DUNGEONLEVELINGCOMPANION("qdone villainy")'); take("chat")
 check("all quests done -> 0 quest XP", ns.QuestXP(bfd) == 0 and ns.QuestsLeft(bfd) == 0, ns.QuestXP(bfd))
-run('ForeverRouteDB.runs.bfd = 1; state.flagged[1199] = nil'); run('ForeverRouteDB.questDone["twilightfalls"] = nil'); qlog()
+run('DungeonLevelingCompanionDB.runs.bfd = 1; state.flagged[1199] = nil'); run('DungeonLevelingCompanionDB.questDone["twilightfalls"] = nil'); qlog()
 check("quest left after first run still counts on the next run", ns.QuestsLeft(bfd) == 1 and ns.QuestXP(bfd) > 0)
 
 # --- 9. Horde route ---
-run('state.faction = "Horde"; SlashCmdList.FOREVERROUTE("faction auto")'); out = take("chat")
+run('state.faction = "Horde"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); out = take("chat")
 check("faction auto -> Horde route", any("Horde route" in l for l in out), out)
 keys = [d.key for d in ns.ROUTE.values()]
 check("Horde route starts RFC, Ruins, WC; no HoT/Stockade", keys[:3] == ["rfc", "rol", "wc"] and "hot" not in keys and "stocks" not in keys, keys[:6])
@@ -363,18 +363,18 @@ check("Horde WC prereqs include The Forgotten Pools chain", d.key == "wc" and "T
 run('state.questLog = { { title = "Leaders of the Fang", id = 1, complete = false } }'); qlog()
 steps = [s.step.q for s in ns.PrepOpen(ns.BY_KEY.wc).values()]
 check("Leaders of the Fang in log -> Forgotten Pools chain done", steps == ["Raptor Horns"], steps)
-run('ForeverRouteDB.achIDs = nil'); ns.ScanAchievements()
-check("achievement 'RFC or Hall of Thanes' maps to rfc for Horde", G.ForeverRouteDB.achDone.rfc == True, list(G.ForeverRouteDB.achDone.keys()))
+run('DungeonLevelingCompanionDB.achIDs = nil'); ns.ScanAchievements()
+check("achievement 'RFC or Hall of Thanes' maps to rfc for Horde", G.DungeonLevelingCompanionDB.achDone.rfc == True, list(G.DungeonLevelingCompanionDB.achDone.keys()))
 check("Horde Novice 6/6 from achievement", ns.TierProgress("Novice")[0] == 6, ns.TierProgress("Novice"))
-run('SlashCmdList.FOREVERROUTE("route")'); out = take("chat"); print("\n".join(out[:5]))
-run('state.faction = "Alliance"; SlashCmdList.FOREVERROUTE("faction auto")'); take("chat")
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("route")'); out = take("chat"); print("\n".join(out[:5]))
+run('state.faction = "Alliance"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
 check("back to Alliance route", ns.ROUTE[1].key == "hot")
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
 
 # --- 10. Same-name chain without IDs (Horde Hidden Enemies) ---
-run('state.faction = "Horde"; SlashCmdList.FOREVERROUTE("faction auto"); SlashCmdList.FOREVERROUTE("reset confirm")'); take("chat")
-run('state.questLog = {}; state.flagged = {}; ForeverRouteDB.questDone = {}; ForeverRouteDB.turnedIn = {}; ForeverRouteDB.idKey = {}; ForeverRouteDB.achDone = {}')
+run('state.faction = "Horde"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto"); SlashCmdList.DUNGEONLEVELINGCOMPANION("reset confirm")'); take("chat")
+run('state.questLog = {}; state.flagged = {}; DungeonLevelingCompanionDB.questDone = {}; DungeonLevelingCompanionDB.turnedIn = {}; DungeonLevelingCompanionDB.idKey = {}; DungeonLevelingCompanionDB.achDone = {}')
 run('state.level = 13; state.xp = 0'); qlog()
 def rfc_steps(): return [(s.step.part, s.status) for s in ns.PrepSteps(ns.BY_KEY.rfc).values()]
 check("Hidden Enemies: both parts to do", rfc_steps() == [(1, "todo"), (2, "todo")], rfc_steps())
@@ -392,7 +392,7 @@ run('state.questLog = { { title = "Hidden Enemies", id = 5728, complete = false 
 check("RFC part in log shown as dungeon quest (yellow)", any(q.name == "Hidden Enemies" and q.inLog for q in ns.DungeonQuests(ns.BY_KEY.rfc).values()))
 run('state.questLog = {}; fire("QUEST_TURNED_IN", 5728, 900, 0)'); qlog()
 check("after the RFC part, dungeon quest finished", not any(q.name == "Hidden Enemies" for q in ns.DungeonQuests(ns.BY_KEY.rfc).values()))
-run('state.faction = "Alliance"; SlashCmdList.FOREVERROUTE("faction auto")'); take("chat")
+run('state.faction = "Alliance"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
 
@@ -410,14 +410,14 @@ run('fire("UNIT_AURA", "player"); state.now = state.now + 0.5'); ns.Refresh()
 check("player UNIT_AURA -> one rescan", G.state.scans > 0)
 fs = ns.FoodStatus(); fs = fs if isinstance(fs, str) else fs[0]
 check("food still detected (only Well Fed tooltip read)", fs == "xp", fs)
-run('SlashCmdList.FOREVERROUTE("perf")'); out = take("chat"); print("\n".join(out))
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("perf")'); out = take("chat"); print("\n".join(out))
 check("/fr perf reports", any("ms each" in l for l in out))
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
 
 # --- 12. Taint safety: no Blizzard raid-warning frame, no alerts at low level / in cinematics ---
 run('state.raidNoticeCalls = 0; RaidNotice_AddMessage = function() state.raidNoticeCalls = state.raidNoticeCalls + 1 end')
-run('SlashCmdList.FOREVERROUTE("set food on"); SlashCmdList.FOREVERROUTE("set tentwarn on")'); take("chat")
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("set food on"); SlashCmdList.DUNGEONLEVELINGCOMPANION("set tentwarn on")'); take("chat")
 run('state.auras.HELPFUL = {}; state.auras.HARMFUL = {}; state.rested = 0; state.indoors = false; state.resting = false; state.combat = false')
 run('state.level = 1; state.xp = 0; state.now = state.now + 1000; tick()')
 check("level 1: no alerts", not take("warnings"))
@@ -429,10 +429,10 @@ run('state.uiVisible = true; state.now = state.now + 1000; tick()')
 w = take("warnings")
 check("level 20, normal UI: alerts fire", any("Well Fed" in x for x in w), w)
 check("Blizzard RaidNotice_AddMessage never called", G.state.raidNoticeCalls == 0, G.state.raidNoticeCalls)
-run('SlashCmdList.FOREVERROUTE("set minlevel 25")'); take("chat")
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("set minlevel 25")'); take("chat")
 run('state.now = state.now + 1000; tick()')
 check("/fr set minlevel 25 -> no alerts at 20", not take("warnings"))
-run('SlashCmdList.FOREVERROUTE("set minlevel 10")'); take("chat")
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("set minlevel 10")'); take("chat")
 # data-only tooltip API path
 run('state.tipFrames = 0; local cf = CreateFrame; CreateFrame = function(kind, ...) if kind == "GameTooltip" then state.tipFrames = state.tipFrames + 1 end return cf(kind, ...) end')
 run('C_TooltipInfo = { GetUnitAura = function(unit, i, filter) local a = state.auras[filter][i] return a and { lines = { { leftText = a.name }, { leftText = a.tip } } } end }')
@@ -445,18 +445,18 @@ check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
 
 # --- 13. Account-wide alert start level (default 4) ---
-run('ForeverRouteGlobalDB = nil; ns_init = 1'); ns.InitDB(); take("chat")
-check("default alert start level is 6", G.ForeverRouteGlobalDB.warnMinLevel == 6, G.ForeverRouteGlobalDB.warnMinLevel)
+run('DungeonLevelingCompanionGlobalDB = nil; ns_init = 1'); ns.InitDB(); take("chat")
+check("default alert start level is 6", G.DungeonLevelingCompanionGlobalDB.warnMinLevel == 6, G.DungeonLevelingCompanionGlobalDB.warnMinLevel)
 run('state.auras.HELPFUL = {}; state.auras.HARMFUL = {}; state.combat = false; state.level = 5; state.now = state.now + 1000; tick()')
 check("level 5: no alerts", not take("warnings"))
 run('state.level = 6; state.now = state.now + 1000; tick()')
 check("level 6: alerts start", len(take("warnings")) > 0)
-run('SlashCmdList.FOREVERROUTE("set minlevel 8")'); out = take("chat")
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("set minlevel 8")'); out = take("chat")
 check("/fr set minlevel says all characters", any("all your characters" in l for l in out), out)
 # "log in" a different character: per-character data is new, account-wide setting stays
-run('ForeverRouteDB = nil'); ns.InitDB()
-check("new character keeps account-wide minlevel 8", G.ForeverRouteGlobalDB.warnMinLevel == 8 and G.ForeverRouteDB.runs is not None and len(list(G.ForeverRouteDB.runs.keys())) == 0)
-check("per-character settings don't carry warnMinLevel", G.ForeverRouteDB.settings.warnMinLevel is None)
+run('DungeonLevelingCompanionDB = nil'); ns.InitDB()
+check("new character keeps account-wide minlevel 8", G.DungeonLevelingCompanionGlobalDB.warnMinLevel == 8 and G.DungeonLevelingCompanionDB.runs is not None and len(list(G.DungeonLevelingCompanionDB.runs.keys())) == 0)
+check("per-character settings don't carry warnMinLevel", G.DungeonLevelingCompanionDB.settings.warnMinLevel is None)
 run('state.level = 6; state.now = state.now + 1000; tick()')
 check("level 6 with minlevel 8: no alerts", not take("warnings"))
 check("no errors", not take("errors"))

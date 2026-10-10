@@ -128,7 +128,7 @@ function ns.ScanAchievements()
     return any
 end
 
--- /fr ach: print what the addon read from the achievements.
+-- /dlc ach: print what the addon read from the achievements.
 function ns.PrintAchievements()
     local Print, DB = ns.Print, ns.DB
     if not ns.ScanAchievements() then

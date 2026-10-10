@@ -1,8 +1,8 @@
-# ForeverRoute – Dungeon Leveling Companion for WoW Forever
+# DLC – Dungeon Leveling Companion
 
-**Level 14–60 through dungeons, with a plan.** ForeverRoute tells your group which dungeon to run at your level, how many more runs until you swap, which quests and prerequisite chains to grab first, and reminds you to keep your XP buffs up.
+**Level 14–60 through dungeons, with a plan.** DLC tells your group which dungeon to run at your level, how many more runs until you swap, which quests and prerequisite chains to grab first, and reminds you to keep your XP buffs up.
 
-Built for WoW Forever's dungeon-leveling meta: the new Forever dungeons, the Spelunker achievements, cooked-food XP, Leatherworking camp tents and the Cozy Sleeping Bag.
+Built for **WoW Forever**'s dungeon-leveling meta: the new Forever dungeons, the Spelunker achievements, cooked-food XP, Leatherworking camp tents and the Cozy Sleeping Bag.
 
 ---
 
@@ -33,7 +33,7 @@ Built for WoW Forever's dungeon-leveling meta: the new Forever dungeons, the Spe
 - **Food:** warns when your Well Fed XP buff is missing, about to expire, or from food without the XP bonus.
 - **Camp tent:** warns when the Boosted Rest cooldown is over — only when you can actually camp (outdoors, outside dungeons, cities and inns) and right after you leave a dungeon.
 - **Cozy Sleeping Bag:** warns when Well-Rested is gone and the bag is off cooldown.
-- No alerts in combat, during cinematics, or below level 6 (configurable once for your whole account with `/fr set minlevel`).
+- No alerts in combat, during cinematics, or below level 6 (configurable once for your whole account with `/dlc set minlevel`).
 
 ---
 
@@ -41,21 +41,21 @@ Built for WoW Forever's dungeon-leveling meta: the new Forever dungeons, the Spe
 
 | Command | What it does |
 |---|---|
-| `/fr` | Show/hide the panel |
-| `/fr route` | Full route with runs done |
-| `/fr quests [dungeon]` | Quests for the current (or named) dungeon |
-| `/fr prep [dungeon]` | Prerequisite quest steps, with what to do |
-| `/fr qdone <quest>` / `/fr qundo <quest>` | Mark a quest or step finished (or not) by hand |
-| `/fr run <dungeon>` / `/fr xp <dungeon> <amount>` | Log a run by hand |
-| `/fr undo` | Remove the last logged run |
-| `/fr ach` | What was read from the Spelunker achievements |
-| `/fr set food\|tentwarn\|tent\|bag on\|off` | Turn alerts / tent estimates on or off |
-| `/fr set calib <n\|auto>` | Force an XP calibration factor |
-| `/fr set minlevel <level>` | Level the alerts start at (default 6; applies to all your characters) |
-| `/fr faction horde\|alliance\|auto` | Pick the route |
-| `/fr lock` / `/fr unlock` | Lock the panel position |
-| `/fr perf` | How much time/memory the addon uses |
-| `/fr help` | All commands |
+| `/dlc` | Show/hide the panel |
+| `/dlc route` | Full route with runs done |
+| `/dlc quests [dungeon]` | Quests for the current (or named) dungeon |
+| `/dlc prep [dungeon]` | Prerequisite quest steps, with what to do |
+| `/dlc qdone <quest>` / `/dlc qundo <quest>` | Mark a quest or step finished (or not) by hand |
+| `/dlc run <dungeon>` / `/dlc xp <dungeon> <amount>` | Log a run by hand |
+| `/dlc undo` | Remove the last logged run |
+| `/dlc ach` | What was read from the Spelunker achievements |
+| `/dlc set food\|tentwarn\|tent\|bag on\|off` | Turn alerts / tent estimates on or off |
+| `/dlc set calib <n\|auto>` | Force an XP calibration factor |
+| `/dlc set minlevel <level>` | Level the alerts start at (default 6; applies to all your characters) |
+| `/dlc faction horde\|alliance\|auto` | Pick the route |
+| `/dlc lock` / `/dlc unlock` | Lock the panel position |
+| `/dlc perf` | How much time/memory the addon uses |
+| `/dlc help` | All commands |
 
 Dungeon keys for commands: `hot rfc dm wc rol sfk bfd stocks rfk exc gnomer smgy dal smlib drowned smarm smcath rfd ulda krol zf mara alcaz st brd blackmaw lbrs dme shaper ubrs dmw dmn stratlive stratud scholo` — or type part of the name.
 
@@ -65,7 +65,7 @@ Dungeon keys for commands: `hot rfc dm wc rol sfk bfd stocks rfk exc gnomer smgy
 
 - **Estimates, not promises.** XP per run starts from a formula (elite counts per clear, 5-man XP share) and gets accurate once you've logged a run or two. New-dungeon numbers are guesses until then.
 - **English client only** for now (buff, instance and achievement names are matched in English).
-- Quest data comes from Wowhead's Classic dungeon quest guide plus Forever beta guides. If a quest never updates, tell me its exact in-game name — `/fr qdone` hides it meanwhile.
+- Quest data comes from Wowhead's Classic dungeon quest guide plus Forever beta guides. If a quest never updates, tell me its exact in-game name — `/dlc qdone` hides it meanwhile.
 - Progress is saved per character.
 - Lightweight: the panel only redraws when something changes (plus every 5s for timers), buffs are read only when they change, and nothing is read in combat.
 

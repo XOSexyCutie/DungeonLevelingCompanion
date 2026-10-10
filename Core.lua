@@ -29,13 +29,13 @@ local DEFAULT_SETTINGS = {
 local DB, S
 
 local function Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99ForeverRoute|r: " .. msg)
+    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99DLC|r: " .. msg)
 end
 ns.Print = Print
 
 local function InitDB()
-    ForeverRouteDB = ForeverRouteDB or {}
-    DB = ForeverRouteDB
+    DungeonLevelingCompanionDB = DungeonLevelingCompanionDB or {}
+    DB = DungeonLevelingCompanionDB
     DB.runs = DB.runs or {}          -- [key] = completed runs
     DB.measured = DB.measured or {}  -- [key] = { trash XP per run, ... } (rested bonus excluded)
     DB.log = DB.log or {}            -- { {key=, xp=, level=, t=}, ... } newest last
@@ -48,8 +48,8 @@ local function InitDB()
     S.warnMinLevel = nil -- moved to the account-wide settings below
 
     -- Account-wide settings (shared by all your characters).
-    ForeverRouteGlobalDB = ForeverRouteGlobalDB or {}
-    local G = ForeverRouteGlobalDB
+    DungeonLevelingCompanionGlobalDB = DungeonLevelingCompanionGlobalDB or {}
+    local G = DungeonLevelingCompanionGlobalDB
     if G.warnMinLevel == nil then G.warnMinLevel = 6 end -- no alerts below this level
     ns.GDB = G
 end
@@ -81,13 +81,13 @@ local function AuraTooltipMentions(index, filter, needle)
         return false
     end
     if not scanTip then
-        scanTip = CreateFrame("GameTooltip", "ForeverRouteScanTip", nil, "GameTooltipTemplate")
+        scanTip = CreateFrame("GameTooltip", "DungeonLevelingCompanionScanTip", nil, "GameTooltipTemplate")
     end
     scanTip:SetOwner(WorldFrame, "ANCHOR_NONE")
     scanTip:ClearLines()
     scanTip:SetUnitAura("player", index, filter)
     for line = 1, scanTip:NumLines() do
-        local fs = _G["ForeverRouteScanTipTextLeft" .. line]
+        local fs = _G["DungeonLevelingCompanionScanTipTextLeft" .. line]
         local text = fs and fs:GetText()
         if text and text:lower():find(needle, 1, true) then
             return true
@@ -467,7 +467,7 @@ local function FinishRun()
         ns.RecordRun(d, run.xp, run.level)
     else
         DB.pending = run
-        Print(("Finished a run in %s but couldn't tell which wing. Type |cffffff00/fr assign <dungeon>|r (e.g. /fr assign smlib)."):format(run.instance))
+        Print(("Finished a run in %s but couldn't tell which wing. Type |cffffff00/dlc assign <dungeon>|r (e.g. /dlc assign smlib)."):format(run.instance))
     end
 end
 
@@ -549,7 +549,7 @@ local tentPending = false
 local alertFrame, alertText
 local function ShowAlert(msg)
     if not alertFrame then
-        alertFrame = CreateFrame("Frame", "ForeverRouteAlert", UIParent)
+        alertFrame = CreateFrame("Frame", "DungeonLevelingCompanionAlert", UIParent)
         alertFrame:SetSize(800, 40)
         alertFrame:SetPoint("TOP", UIParent, "TOP", 0, -180)
         alertFrame:SetFrameStrata("HIGH")
@@ -656,7 +656,7 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     if event == "ADDON_LOADED" then
         if arg1 == ADDON then
             InitDB()
-            -- Horde or Alliance route (S.faction overrides, set with /fr faction).
+            -- Horde or Alliance route (S.faction overrides, set with /dlc faction).
             ns.BuildRoute(S.faction or UnitFactionGroup("player"))
             SnapshotXP()
             if ns.CreateUI then ns.CreateUI() end

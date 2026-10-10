@@ -1,7 +1,7 @@
-"""Draws the ForeverRoute CurseForge avatar (400x400 PNG, original art).
+"""Draws the DLC (Dungeon Leveling Companion) CurseForge avatar (400x400 PNG, original art).
 
 A winding dashed route through dungeon stops on a dark map background, ending at a flag,
-with "FR" below. Rendered at 4x and scaled down for smooth edges.
+with "DLC" below. Rendered at 4x and scaled down for smooth edges.
 
     python media/make_avatar.py        (needs: pip install pillow)
 """
@@ -107,12 +107,12 @@ d.line([(fx, fy + 22 * S), (fx, fy - 34 * S)], fill=(230, 220, 200), width=5 * S
 d.polygon([(fx + 2 * S, fy - 34 * S), (fx + 44 * S, fy - 24 * S), (fx + 2 * S, fy - 12 * S)], fill=(214, 70, 64))
 d.ellipse([fx - 9 * S, fy + 16 * S, fx + 9 * S, fy + 28 * S], fill=GOLD_DARK)
 
-# "FR" monogram.
-font = ImageFont.truetype(r"C:\Windows\Fonts\seguibl.ttf", 120 * S)
-text = "FR"
+# "DLC" monogram.
+font = ImageFont.truetype(r"C:\Windows\Fonts\seguibl.ttf", 96 * S)
+text = "DLC"
 bbox = d.textbbox((0, 0), text, font=font)
 tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-tx, ty = (W - tw) // 2 - bbox[0] + 40 * S, 268 * S - bbox[1]
+tx, ty = (W - tw) // 2 - bbox[0] + 38 * S, 282 * S - bbox[1]
 shadow = Image.new("RGBA", (W, W), (0, 0, 0, 0))
 ImageDraw.Draw(shadow).text((tx + 4 * S, ty + 6 * S), text, font=font, fill=(0, 0, 0, 170))
 img = Image.alpha_composite(img, shadow.filter(ImageFilter.GaussianBlur(4 * S)))

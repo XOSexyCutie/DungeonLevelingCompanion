@@ -1,5 +1,5 @@
 # CurseForge / BigWigs packager config (only used if you publish from a git repo).
-package-as: ForeverRoute
+package-as: DungeonLevelingCompanion
 
 manual-changelog:
   filename: CHANGELOG.md
