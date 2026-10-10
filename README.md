@@ -69,4 +69,8 @@ Dungeon keys for commands: `hot rfc dm wc rol sfk bfd stocks rfk exc gnomer smgy
 - Progress is saved per character.
 - Lightweight: the panel only redraws when something changes (plus every 5s for timers), buffs are read only when they change, and nothing is read in combat.
 
-Feedback, wrong quest names or measured XP numbers are very welcome in the comments!
+---
+
+## Feedback & bug reports
+
+Found a bug, a quest that never updates, or have measured XP numbers for a dungeon? Please open an issue on GitHub: **https://github.com/XOSexyCutie/foreverroute/issues** — or leave a comment here. Include the exact quest/dungeon name and any error text.
