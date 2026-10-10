@@ -71,14 +71,27 @@ end
 -- frame runs shared Blizzard tooltip code from our (addon) context, which can taint it.
 -- The hidden tooltip is only a fallback for clients without C_TooltipInfo.
 local scanTip
-local function AuraTooltipMentions(index, filter, needle)
+
+-- Text of one C_TooltipInfo line. Depending on the client version the text is either on the
+-- line itself (leftText/rightText) or still packed in line.args ({ field = "leftText", stringVal = ... }).
+local function TooltipLineTexts(line, out)
+    for _, key in ipairs({ "leftText", "rightText" }) do
+        if type(line[key]) == "string" and line[key] ~= "" then table.insert(out, line[key]) end
+    end
+    for _, arg in ipairs(line.args or {}) do
+        if (arg.field == "leftText" or arg.field == "rightText") and type(arg.stringVal) == "string" and arg.stringVal ~= "" then
+            table.insert(out, arg.stringVal)
+        end
+    end
+end
+
+-- All tooltip text lines of a player aura (empty table if the tooltip isn't available yet).
+local function AuraTooltipLines(index, filter)
+    local out = {}
     if C_TooltipInfo and C_TooltipInfo.GetUnitAura then
         local data = C_TooltipInfo.GetUnitAura("player", index, filter)
-        for _, line in ipairs(data and data.lines or {}) do
-            local text = line.leftText
-            if type(text) == "string" and text:lower():find(needle, 1, true) then return true end
-        end
-        return false
+        for _, line in ipairs(data and data.lines or {}) do TooltipLineTexts(line, out) end
+        return out
     end
     if not scanTip then
         scanTip = CreateFrame("GameTooltip", "DungeonLevelingCompanionScanTip", nil, "GameTooltipTemplate")
@@ -89,18 +102,30 @@ local function AuraTooltipMentions(index, filter, needle)
     for line = 1, scanTip:NumLines() do
         local fs = _G["DungeonLevelingCompanionScanTipTextLeft" .. line]
         local text = fs and fs:GetText()
-        if text and text:lower():find(needle, 1, true) then
-            return true
-        end
+        if text and text ~= "" then table.insert(out, text) end
     end
-    return false
+    return out
+end
+ns.AuraTooltipLines, ns.GetAura = AuraTooltipLines, GetAura
+
+local function MentionsXP(text)
+    local lower = text:lower()
+    return lower:find("experience", 1, true) or lower:find("%f[%a]xp%f[%A]") ~= nil
 end
 
--- Whether a Well Fed buff gives XP, remembered per spell so each food's tooltip is read once.
+-- Whether a Well Fed buff gives XP: true, false, or nil when its tooltip isn't loaded yet.
+-- Only a real answer is remembered (per spell), so a tooltip that wasn't ready isn't
+-- cached as "no XP".
 local foodXPBySpell = {}
 local function FoodGivesXP(index, spellId)
     if spellId and foodXPBySpell[spellId] ~= nil then return foodXPBySpell[spellId] end
-    local xp = AuraTooltipMentions(index, "HELPFUL", "experience")
+    local lines = AuraTooltipLines(index, "HELPFUL")
+    -- Line 1 is the buff's name; without a description line the tooltip isn't ready.
+    if #lines < 2 then return nil end
+    local xp = false
+    for _, text in ipairs(lines) do
+        if MentionsXP(text) then xp = true break end
+    end
     if spellId then foodXPBySpell[spellId] = xp end
     return xp
 end
@@ -127,9 +152,12 @@ local function ScanAuras()
             c.tentCd, c.tentExp = true, exp
         elseif lower:find("well fed", 1, true) and c.food ~= "xp" then
             -- Only Well Fed buffs get the (slower) tooltip check for the XP bonus.
-            if FoodGivesXP(i, spellId) then
+            local xp = FoodGivesXP(i, spellId)
+            if xp then
                 c.food, c.foodExp = "xp", exp
-            else
+            elseif xp == nil then
+                c.food, c.foodExp, c.retry = "checking", exp, true -- tooltip not loaded yet
+            elseif c.food ~= "checking" then
                 c.food, c.foodExp = "nonxp", exp
             end
         end
@@ -152,7 +180,8 @@ local function RefreshAuras()
     if not auraDirty and GetTime() - lastScan < 30 then return end
     local ok, c = pcall(ScanAuras)
     if ok and c then auraCache = c end
-    auraDirty, lastScan = false, GetTime()
+    -- A food tooltip that wasn't loaded yet gets read again on the next refresh.
+    auraDirty, lastScan = (ok and c and c.retry) or false, GetTime()
 end
 
 local function Left(exp)
@@ -588,7 +617,7 @@ local function CheckWarnings()
 
     if S.warnFood then
         local state, left = FoodStatus()
-        if state ~= "xp" then
+        if state ~= "xp" and state ~= "checking" then
             foodExpireWarned = nil
             if not inCombat and now - lastFoodWarn >= S.foodThrottle then
                 lastFoodWarn = now

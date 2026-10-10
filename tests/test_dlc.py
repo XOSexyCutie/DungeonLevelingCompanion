@@ -461,3 +461,36 @@ run('state.level = 6; state.now = state.now + 1000; tick()')
 check("level 6 with minlevel 8: no alerts", not take("warnings"))
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
+
+# --- 14. Food XP detection robustness ---
+def food():
+    fs = ns.FoodStatus(); return fs if isinstance(fs, str) else fs[0]
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("set food on")'); take("chat")
+run('state.level = 20; state.combat = false; state.auras.HARMFUL = {}')
+# a) C_TooltipInfo where text only exists in line.args (older client format)
+run('C_TooltipInfo = { GetUnitAura = function(u, i, f) local a = state.auras[f][i] if not a then return nil end '
+    'return { lines = { { args = { { field = "leftText", stringVal = a.name } } }, { args = { { field = "leftText", stringVal = a.tip } } } } } end }')
+run('state.auras.HELPFUL = { { name = "Well Fed", exp = state.now + 900, tip = "Increases experience gained from kills by 5%.", spell = 1 } }')
+run('local o = C_UnitAuras.GetAuraDataByIndex; C_UnitAuras.GetAuraDataByIndex = function(u, i, f) local d = o(u, i, f) local a = state.auras[f][i] if d and a then d.spellId = a.spell end return d end')
+run('fire("UNIT_AURA", "player"); state.now = state.now + 1')
+check("tooltip text packed in line.args -> XP food detected", food() == "xp", food())
+# b) tooltip not loaded yet (only the name line) -> 'checking', no alert, not cached as 'no XP'
+run('state.tipReady = false; local real = C_TooltipInfo.GetUnitAura; C_TooltipInfo.GetUnitAura = function(u, i, f) local d = real(u, i, f) if d and not state.tipReady then d.lines = { d.lines[1] } end return d end')
+run('state.auras.HELPFUL = { { name = "Well Fed", exp = state.now + 900, tip = "Increases experience gained from kills by 5%.", spell = 2 } }; fire("UNIT_AURA", "player"); state.now = state.now + 1')
+check("tooltip not ready -> 'checking'", food() == "checking", food())
+take("warnings"); run('state.now = state.now + 500; tick()')
+check("no 'no XP' alert while checking", not any("no bonus XP" in w or "Missing" in w for w in take("warnings")))
+run('state.tipReady = true; state.now = state.now + 2'); ns.Refresh()
+check("tooltip loads -> XP detected on retry", food() == "xp", food())
+# c) wording with 'XP' instead of 'experience'
+run('state.auras.HELPFUL = { { name = "Well Fed", exp = state.now + 900, tip = "Increases XP from kills by 5%.", spell = 3 } }; fire("UNIT_AURA", "player"); state.now = state.now + 1')
+check("'XP' wording detected", food() == "xp", food())
+# d) genuinely non-XP food
+run('state.auras.HELPFUL = { { name = "Well Fed", exp = state.now + 900, tip = "Increases Stamina and Spirit by 2.", spell = 4 } }; fire("UNIT_AURA", "player"); state.now = state.now + 1')
+check("stat-only food -> 'nonxp'", food() == "nonxp", food())
+# e) /dlc buffs diagnostic
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("buffs")'); out = take("chat"); print("\n".join(out))
+check("/dlc buffs lists the buff, its spell and tooltip", any("Well Fed" in l and "spell 4" in l for l in out) and any("Stamina" in l for l in out))
+run('C_TooltipInfo = nil')
+check("no errors", not take("errors"))
+print("\nFAILURES:", fails)

@@ -10,4 +10,5 @@
 - Spelunker achievement progress read from the achievement system.
 - Alerts for Well Fed (XP food), Leatherworking camp tent cooldown (outdoors only, not in cities/inns/dungeons) and the Cozy Sleeping Bag.
 - Combat-safe: no buff reads in combat, no alerts in combat or cinematics.
+- Food XP check handles every tooltip format, retries if the tooltip isn't loaded yet, and `/dlc buffs` shows exactly what the addon reads.
 - Alerts use their own on-screen text (no Blizzard raid-warning frame, avoids UI taint) and start at level 6 by default; `/dlc set minlevel` sets it account-wide.

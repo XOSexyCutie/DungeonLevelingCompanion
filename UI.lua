@@ -134,8 +134,10 @@ local function BuildText()
         local state, left = ns.FoodStatus()
         if state == "xp" then
             table.insert(lines, ("Food: %sWell Fed (XP)|r %s"):format(GREEN, left and Mins(left) or ""))
+        elseif state == "checking" then
+            table.insert(lines, "Food: " .. GREY .. "Well Fed (checking tooltip...)|r")
         elseif state == "nonxp" then
-            table.insert(lines, "Food: " .. YELLOW .. "Well Fed, but no XP bonus|r")
+            table.insert(lines, "Food: " .. YELLOW .. "Well Fed, but no XP bonus (/dlc buffs)|r")
         else
             table.insert(lines, "Food: " .. RED .. "MISSING|r")
         end
@@ -294,6 +296,7 @@ local HELP = {
     "/dlc undo - remove the last logged run",
     "/dlc ach - show what was read from the Spelunker achievements",
     "/dlc perf - how much time/memory the addon uses",
+    "/dlc buffs - list your buffs and their tooltip text (for food/tent/bag issues)",
     "/dlc set food|tentwarn|tent|bag on|off  -  /dlc set calib <n|auto>  -  /dlc set minlevel <n>",
     "/dlc lock | unlock - lock window position",
     "/dlc faction horde|alliance|auto - pick the route (auto = your character)",
@@ -353,6 +356,26 @@ SlashCmdList.DUNGEONLEVELINGCOMPANION = function(input)
     elseif cmd == "set" then
         local key, value = rest:match("^(%S+)%s*(%S*)$")
         SetSetting(key and key:lower(), value and value:lower())
+    elseif cmd == "buffs" then
+        -- Diagnostic: every buff/debuff on you as the addon sees it, with tooltip text.
+        if InCombatLockdown() then Print("Buffs can't be read in combat - try again after.") return end
+        local ok, err = pcall(function()
+            for _, filter in ipairs({ "HELPFUL", "HARMFUL" }) do
+                for i = 1, 40 do
+                    local name, expires, spellId, count = ns.GetAura(i, filter)
+                    if not name then break end
+                    Print(("%s%s|r (spell %s%s%s)"):format(YELLOW, name, tostring(spellId),
+                        (count and count > 1) and (", x" .. count) or "",
+                        filter == "HARMFUL" and ", debuff" or ""))
+                    for n, text in ipairs(ns.AuraTooltipLines(i, filter)) do
+                        if n > 1 then Print("    " .. GREY .. text .. "|r") end
+                    end
+                end
+            end
+        end)
+        if not ok then Print("Couldn't read buffs: " .. tostring(err)) end
+        local state = ns.FoodStatus()
+        Print(("Food status the addon uses: %s"):format(tostring(state)))
     elseif cmd == "perf" then
         -- How expensive is one panel redraw + warning check, and how much memory we use.
         local timer = debugprofilestop
