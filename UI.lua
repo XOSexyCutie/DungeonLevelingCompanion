@@ -24,16 +24,28 @@ local function QuestLine(q)
     return ("  %s- %s%s|r"):format(GREY, q.name, q.from and (" (" .. q.from .. ")") or "")
 end
 
+-- Your unfinished quests for d, each with the party members (group sync) who need it too,
+-- then the quests you've finished that someone in the party still needs.
 local function AddQuestLines(lines, d)
     local quests = ns.DungeonQuests and ns.DungeonQuests(d) or {}
-    if #quests == 0 then return end
-    table.insert(lines, ("Quests (%d left):"):format(#quests))
-    for i, q in ipairs(quests) do
-        if i > MAX_QUEST_LINES then
-            table.insert(lines, ("  %s+%d more - /dlc quests|r"):format(GREY, #quests - MAX_QUEST_LINES))
-            break
+    local needs = ns.PartyNeeds and ns.PartyNeeds(d) or {}
+    if #quests > 0 then
+        table.insert(lines, ("Quests (%d left):"):format(#quests))
+        for i, q in ipairs(quests) do
+            if i > MAX_QUEST_LINES then
+                table.insert(lines, ("  %s+%d more - /dlc quests|r"):format(GREY, #quests - MAX_QUEST_LINES))
+                break
+            end
+            local who = needs[q.key]
+            table.insert(lines, QuestLine(q) .. (who and (" %s+%s|r"):format(GREY, table.concat(who, ", ")) or ""))
+            needs[q.key] = nil
         end
-        table.insert(lines, QuestLine(q))
+    end
+    for _, q in ipairs(d.questInfo or {}) do
+        local who = needs[q.key]
+        if who then
+            table.insert(lines, ("  %sGroup needs: %s (%s)|r"):format(GREY, q.name, table.concat(who, ", ")))
+        end
     end
 end
 
@@ -73,22 +85,51 @@ local function AddPrepLines(lines, d, title)
     return true
 end
 
--- Items to grab for later dungeons: in the recommended dungeon, or the one you're running now.
-local function AddLootLines(lines, d)
-    local here = { d }
-    local run = ns.DB.curRun
+-- Route dungeons you're running right now (several SM wings share one instance name).
+local function RunningIn()
+    local out, run = {}, ns.DB.curRun
     if run and run.instance then
         local inst = run.instance:lower()
         for _, e in ipairs(ns.ROUTE) do
             for _, m in ipairs(e.match or {}) do
-                if e ~= d and inst:find(m, 1, true) then table.insert(here, e) break end
+                if inst:find(m, 1, true) then out[e] = true break end
             end
         end
     end
+    return out
+end
+
+-- Secret bosses and items to grab for later dungeons: in the recommended dungeon, or the one
+-- you're running now. How to summon a secret boss is only spelled out while you're inside.
+local function AddSecretLines(lines, d)
+    local inside = RunningIn()
+    local here = { d }
+    for e in pairs(inside) do if e ~= d then table.insert(here, e) end end
     for _, e in ipairs(here) do
         for _, r in ipairs(ns.LootReminders(e)) do
             table.insert(lines, ("%sLoot: %s|r %s(%s) - for %s|r"):format(YELLOW, r.step.q, GREY, r.step.from or "", r["for"].name))
         end
+        if e.secret then
+            table.insert(lines, ("%sSecret boss:|r %s"):format(YELLOW, e.secret.boss))
+            if inside[e] then table.insert(lines, ("  %s%s|r"):format(GREY, e.secret.how)) end
+        end
+    end
+end
+
+-- Party members running DLC (group sync): level, where they are on their route, food, prereqs.
+local function AddGroupLines(lines, d)
+    local members = ns.PartyMembers and ns.PartyMembers() or {}
+    if #members == 0 then return end
+    table.insert(lines, ("Group (%d with DLC):"):format(#members))
+    for _, m in ipairs(members) do
+        local where = ""
+        local theirs = m.cur and ns.BY_KEY[m.cur]
+        if theirs and theirs ~= d then where = " - " .. theirs.name
+        elseif theirs and m.runsLeft then where = (" - ~%d left"):format(m.runsLeft) end
+        local food = m.food == false and (RED .. " no XP food|r") or ""
+        local prep = (d and m.prep and m.prep[d.key] or 0) > 0
+            and (" %s%d prereq%s left|r"):format(YELLOW, m.prep[d.key], m.prep[d.key] == 1 and "" or "s") or ""
+        table.insert(lines, ("  %s %d%s%s%s"):format(m.name, m.level or 0, where, food, prep))
     end
 end
 
@@ -117,12 +158,12 @@ local function BuildText()
             end
         end
         -- Prereqs for this dungeon if you haven't run it yet, then its quests.
-        if done == 0 then AddPrepLines(lines, d, "Before your first run:") end
-        AddQuestLines(lines, d)
-        AddLootLines(lines, d)
+        if S.showPrep and done == 0 then AddPrepLines(lines, d, "Before your first run:") end
+        if S.showQuests then AddQuestLines(lines, d) end
+        if S.showSecrets then AddSecretLines(lines, d) end
         -- Prereqs for the next dungeon once the swap is close.
         local nextD = ns.ROUTE[d.index + 1]
-        if lvl < 60 and lvl >= d.start and nextD and nextD.start < 60
+        if S.showPrep and lvl < 60 and lvl >= d.start and nextD and nextD.start < 60
             and (lvl >= nextD.start - 2 or ns.RunsLeft(d) <= 2) then
             if not AddPrepLines(lines, nextD, ("Prep for %s:"):format(nextD.name)) then
                 table.insert(lines, ("%sNext: %s at %d - no prereqs needed|r"):format(GREY, nextD.name, nextD.start))
@@ -132,25 +173,29 @@ local function BuildText()
         table.insert(lines, GREEN .. "Route complete!|r")
     end
 
-    local tiers = {}
-    for _, t in ipairs(ns.TIERS) do
-        local done, total = ns.TierProgress(t)
-        local achT = ns.DB.achTiers and ns.DB.achTiers[t]
-        local color = (done == total or (achT and achT.completed)) and GREEN or WHITE
-        tiers[#tiers + 1] = ("%s%s %d/%d|r"):format(color, t:sub(1, 3), done, total)
-    end
-    table.insert(lines, "Spelunker: " .. table.concat(tiers, "  "))
+    if S.showGroup then AddGroupLines(lines, d) end
 
-    if #missed > 0 then
-        local names = {}
-        for i, m in ipairs(missed) do
-            if i > 3 then names[#names + 1] = ("+%d more"):format(#missed - 3) break end
-            names[#names + 1] = m.name
+    if S.showSpelunker then
+        local tiers = {}
+        for _, t in ipairs(ns.TIERS) do
+            local done, total = ns.TierProgress(t)
+            local achT = ns.DB.achTiers and ns.DB.achTiers[t]
+            local color = (done == total or (achT and achT.completed)) and GREEN or WHITE
+            tiers[#tiers + 1] = ("%s%s %d/%d|r"):format(color, t:sub(1, 3), done, total)
         end
-        table.insert(lines, RED .. "Not run yet: " .. table.concat(names, ", ") .. "|r")
+        table.insert(lines, "Spelunker: " .. table.concat(tiers, "  "))
+
+        if #missed > 0 then
+            local names = {}
+            for i, m in ipairs(missed) do
+                if i > 3 then names[#names + 1] = ("+%d more"):format(#missed - 3) break end
+                names[#names + 1] = m.name
+            end
+            table.insert(lines, RED .. "Not run yet: " .. table.concat(names, ", ") .. "|r")
+        end
     end
 
-    if lvl < 60 then
+    if S.showBuffs and lvl < 60 then
         local state, left = ns.FoodStatus()
         if state == "xp" then
             table.insert(lines, ("Food: %sWell Fed (XP)|r %s"):format(GREEN, left and Mins(left) or ""))
@@ -244,9 +289,33 @@ function ns.CreateUI()
     text:SetJustifyH("LEFT")
     text:SetJustifyV("TOP")
 
+    frame:SetScript("OnMouseUp", function(_, button)
+        if button == "RightButton" and ns.ToggleOptions then ns.ToggleOptions() end
+    end)
+
+    ns.ApplyLook()
     frame:SetShown(S.shown)
     ns.Refresh()
 end
+
+-- Panel scale and background opacity from the settings.
+function ns.ApplyLook()
+    if not frame then return end
+    local S = ns.S
+    frame:SetScale(S.scale or 1)
+    if frame.SetBackdropColor then
+        frame:SetBackdropColor(0, 0, 0, S.bgAlpha or 0.75)
+        frame:SetBackdropBorderColor(1, 1, 1, math.min(1, (S.bgAlpha or 0.75) + 0.25))
+    end
+end
+
+function ns.SetPanelShown(show)
+    ns.S.shown = show and true or false
+    if frame then frame:SetShown(ns.S.shown) end
+    ns.Refresh()
+end
+
+function ns.TogglePanel() ns.SetPanelShown(not (frame and frame:IsShown())) end
 
 ---------------------------------------------------------------------------
 -- Slash commands
@@ -318,6 +387,10 @@ local HELP = {
     "/dlc perf - how much time/memory the addon uses",
     "/dlc buffs - list your buffs and their tooltip text (for food/tent/bag issues)",
     "/dlc set food|tentwarn|tent|bag on|off  -  /dlc set calib <n|auto>  -  /dlc set minlevel <n>",
+    "/dlc config - options window (also: right-click the panel or minimap button)",
+    "/dlc minimap - show/hide the minimap button",
+    "/dlc group - what your party (with DLC) still needs",
+    "/dlc sync on|off - share your progress with your party",
     "/dlc lock | unlock - lock window position",
     "/dlc faction horde|alliance|auto - pick the route (auto = your character)",
     "/dlc reset confirm - wipe this character's data",
@@ -338,8 +411,19 @@ SlashCmdList.DUNGEONLEVELINGCOMPANION = function(input)
     local cmd, rest = (input or ""):match("^%s*(%S*)%s*(.-)%s*$")
     cmd = cmd:lower()
     if cmd == "" then
-        S.shown = not frame:IsShown()
-        frame:SetShown(S.shown)
+        ns.TogglePanel()
+    elseif cmd == "config" or cmd == "options" then
+        ns.ToggleOptions()
+    elseif cmd == "minimap" then
+        ns.GDB.minimapHide = not ns.GDB.minimapHide
+        if ns.UpdateMinimapButton then ns.UpdateMinimapButton() end
+        Print("Minimap button " .. (ns.GDB.minimapHide and "hidden." or "shown."))
+    elseif cmd == "group" then
+        ns.PrintGroup()
+    elseif cmd == "sync" then
+        ns.GDB.sync = (rest:lower() ~= "off")
+        if ns.GDB.sync and ns.SyncNow then ns.SyncNow() end
+        Print("Group sync " .. (ns.GDB.sync and "on." or "off."))
         ns.Refresh()
     elseif cmd == "help" then
         ShowHelp()

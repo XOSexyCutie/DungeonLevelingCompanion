@@ -129,7 +129,7 @@ end
 ''')
 
 ns = lua.table()
-for fname in ["Data.lua", "Core.lua", "UI.lua", "Achievements.lua", "Quests.lua"]:
+for fname in ["Data.lua", "Core.lua", "UI.lua", "Achievements.lua", "Quests.lua", "Sync.lua", "Options.lua"]:
     code = (ADDON_DIR / fname).read_text(encoding="utf-8")
     lua.eval(f"function(code) return assert(loadstring(code, '@{fname}')) end")(code)("DungeonLevelingCompanion", ns)
 
@@ -532,4 +532,55 @@ check("Tome of Dalaran in bags -> both done", tome() == [("Black Tome", "done"),
 run('state.items[275989] = 0')
 check("tome used up -> still done (remembered)", tome() == [("Black Tome", "done"), ("Tome of Dalaran", "done")], tome())
 check("no errors", not take("errors"))
+print("\nFAILURES:", fails)
+
+# --- 17. Group sync, options window, minimap button, panel sections ---
+run('''
+state.sent = {}; state.inGroup = false; state.party = {}
+function IsInGroup() return state.inGroup end
+function IsInRaid() return false end
+function GetNumGroupMembers() return state.inGroup and 2 or 0 end
+function UnitName() return "Me" end
+function Ambiguate(s) return s end
+function UnitInParty(n) return state.party[n] or false end
+C_ChatInfo = { RegisterAddonMessagePrefix = function() return true end,
+               SendAddonMessage = function(p, m, ch) table.insert(state.sent, { p, m, ch }) end }
+GameTooltip = setmetatable({}, { __index = function() return function() end end })
+Minimap = CreateFrame("Frame", "Minimap"); Minimap.GetWidth = function() return 140 end; Minimap.GetCenter = function() return 100, 100 end
+''')
+run('state.level = 21; state.xp = 0; state.now = state.now + 100; state.inGroup = true; state.party.Bob = true; fire("GROUP_ROSTER_UPDATE")')
+sent = [(m[1], m[2], m[3]) for m in G.state.sent.values()]
+check("joining a group asks for status and sends ours", any(s[1] == "R" for s in sent) and any(s[1].startswith("S;1;A;21;") for s in sent), sent)
+check("sent to PARTY with the DLCSYNC prefix", all(s[0] == "DLCSYNC" and s[2] == "PARTY" for s in sent), sent)
+d = ns.Recommend()[0]
+n = len(list(d.questInfo.values()))
+run(f'fire("CHAT_MSG_ADDON", "DLCSYNC", "S;1;A;22;{d.key};2;0;{d.key}={"1" * n},1", "PARTY", "Bob")')
+lines = panel()
+check("panel: group line with Bob, level, no XP food, prereqs", any("Bob 22" in l and "no XP food" in l for l in lines), [l for l in lines if "Bob" in l])
+check("panel: quests show who else needs them", n == 0 or any("Bob" in l and ("+Bob" in l or "Group needs" in l) for l in lines), [l for l in lines if "Bob" in l])
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("group")'); out = take("chat")
+check("/dlc group lists Bob", any("Bob (22)" in l for l in out), out[:3])
+run('state.sent = {}; state.combat = true; state.now = state.now + 120'); run('for _, fn in ipairs(tickers) do fn() end')
+check("nothing sent in combat", len(list(G.state.sent.values())) == 0, list(G.state.sent.values()))
+run('state.combat = false; fire("PLAYER_REGEN_ENABLED")')
+check("queued status sent after combat", len(list(G.state.sent.values())) > 0)
+run('state.party.Bob = nil; fire("GROUP_ROSTER_UPDATE")'); lines = panel()
+check("Bob leaves -> dropped from the panel", not any("Bob" in l for l in lines))
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("sync off")'); take("chat"); run('state.sent = {}; state.now = state.now + 120; for _, fn in ipairs(tickers) do fn() end')
+check("sync off -> nothing sent", len(list(G.state.sent.values())) == 0)
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("sync on")'); take("chat")
+# options + minimap
+run('ns_opts_ok = pcall(SlashCmdList.DUNGEONLEVELINGCOMPANION, "config")')
+check("/dlc config builds the options window", G.ns_opts_ok and G.DungeonLevelingCompanionOptions is not None)
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("minimap")'); out = take("chat")
+check("/dlc minimap toggles the button", any("hidden" in l for l in out) and G.DungeonLevelingCompanionGlobalDB.minimapHide, out)
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("minimap")'); take("chat")
+# section toggles + secret boss
+G.DungeonLevelingCompanionDB.settings.showSpelunker = False; lines = panel()
+check("Spelunker section can be hidden", not any("Spelunker:" in l for l in lines))
+G.DungeonLevelingCompanionDB.settings.showSpelunker = True
+run('state.level = 20'); lines = panel()
+rec = ns.Recommend()[0].key
+check("Ruins of Lordaeron shows its secret boss", rec != "rol" or any("Secret boss:" in l and "Viktor" in l for l in lines), (rec, [l for l in lines if "Secret" in l]))
+check("no errors", not take("errors"), take("errors"))
 print("\nFAILURES:", fails)

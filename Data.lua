@@ -21,6 +21,7 @@ ns.XP = {
 --   match     lowercase pieces of the instance name (GetInstanceInfo) that identify it
 --   subzones  lowercase subzones that tell apart wings sharing one instance name
 --   questList "Quest Name (where/giver) [questID]" - the [id] is optional, only where known.
+--   secret    hidden boss: { boss = name, how = how to summon it }
 --             Quest lists and prerequisites follow Wowhead's Classic dungeon quest guide.
 local ALLIANCE = {
     { key = "hot", name = "Hall of Thanes", start = 14, to = 17, off = 1, elites = 90, quests = 5, min = 35, tier = "Novice",
@@ -44,6 +45,7 @@ local ALLIANCE = {
     { key = "rol", name = "Ruins of Lordaeron", start = 20, to = 21, off = 1, elites = 120, quests = 4, min = 45, tier = "Novice",
       match = { "ruins of lordaeron" },
       note = "Long walk for Alliance. Pair with SFK. Quests are picked up inside.",
+      secret = { boss = "Viktor the Vile", how = "After Rath'mael: take the Soul Flame from the brazier behind his altar to the brazier by the southwest sewer gate, then survive the waves. Guides differ on the details." },
       questList = { "Abominable Creatures (Captain Truman, entrance)", "Bloodied Insignia (drops inside)", "Remember That I Love You (inside)",
                     "Crest of Lordaeron (inside - may be Horde only)" } },
     { key = "sfk", name = "Shadowfang Keep", start = 21, to = 22, off = 1, elites = 110, quests = 0, min = 45, tier = "Novice",
@@ -86,6 +88,7 @@ local ALLIANCE = {
     { key = "dal", name = "City of Dalaran", start = 31, to = 33, off = 1, elites = 200, quests = 5, min = 70, tier = "Experienced",
       match = { "dalaran" },
       note = "In beta. If not live: SM Graveyard/Library until 33.",
+      secret = { boss = "Lyn the Ignored", how = "Use the Tome of Dalaran on the summoning circle in the small room past Atrexis the Grave Knight (straight ahead, not up the ramp)." },
       questList = { "5 quests (names TBD)" } },
     { key = "smlib", name = "SM Library", start = 33, to = 35, off = 1, elites = 90, quests = 1, min = 30, tier = "Experienced",
       match = { "scarlet monastery" }, subzones = { "library", "huntsman's cloister", "gallery of treasures", "athenaeum" },
@@ -478,7 +481,7 @@ for k, d in pairs(EXTRA) do BASE[k] = d end
 
 local function CopyStats(src)
     return { key = src.key, name = src.name, off = src.off, elites = src.elites, min = src.min, tier = src.tier,
-             match = src.match, subzones = src.subzones }
+             match = src.match, subzones = src.subzones, secret = src.secret }
 end
 
 function ns.BuildRoute(faction)

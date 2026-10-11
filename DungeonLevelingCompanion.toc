@@ -15,3 +15,5 @@ Core.lua
 UI.lua
 Achievements.lua
 Quests.lua
+Sync.lua
+Options.lua

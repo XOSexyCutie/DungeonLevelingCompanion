@@ -24,6 +24,14 @@ local DEFAULT_SETTINGS = {
     tentThrottle = 120,     -- seconds between repeated tent warnings
     shown = true,
     locked = false,
+    scale = 1,              -- panel scale
+    bgAlpha = 0.75,         -- panel background opacity
+    showBuffs = true,       -- panel sections
+    showQuests = true,
+    showPrep = true,
+    showSecrets = true,     -- secret bosses and items to loot for later dungeons
+    showGroup = true,
+    showSpelunker = true,
 }
 
 local DB, S
@@ -51,6 +59,8 @@ local function InitDB()
     DungeonLevelingCompanionGlobalDB = DungeonLevelingCompanionGlobalDB or {}
     local G = DungeonLevelingCompanionGlobalDB
     if G.warnMinLevel == nil then G.warnMinLevel = 6 end -- no alerts below this level
+    if G.sync == nil then G.sync = true end                -- share progress with your party (group sync)
+    if G.minimapAngle == nil then G.minimapAngle = 220 end -- minimap button position (degrees)
     ns.GDB = G
 end
 
@@ -699,6 +709,8 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
             ns.BuildRoute(S.faction or UnitFactionGroup("player"))
             SnapshotXP()
             if ns.CreateUI then ns.CreateUI() end
+            if ns.CreateMinimapButton then ns.CreateMinimapButton() end
+            if ns.RegisterOptions then pcall(ns.RegisterOptions) end -- Blizzard settings entry; ours works without it
             C_Timer.NewTicker(5, function() CheckRunTimeout() CheckWarnings() end)
             -- Panel redraw: right after something changed, else every 5s for the timers.
             C_Timer.NewTicker(1, function()
