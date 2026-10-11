@@ -319,8 +319,12 @@ function ns.Calibration()
     return 1
 end
 
+-- Measured average if you have one, else the known per-run XP (d.xp), else the calibrated formula.
 function ns.XPPerRun(d)
-    return Avg(DB.measured[d.key]) or RawTrash(d) * ns.Calibration() * KillBonus(d), Avg(DB.measured[d.key]) ~= nil
+    local avg = Avg(DB.measured[d.key])
+    if avg then return avg, true end
+    if d.xp then return d.xp, false end
+    return RawTrash(d) * ns.Calibration() * KillBonus(d), false
 end
 
 -- Minutes per run: measured start-to-start time once you have it, else the estimate.

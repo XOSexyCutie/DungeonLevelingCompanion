@@ -15,6 +15,7 @@ ns.XP = {
 --   start/to  leg: run this dungeon from level `start` until level `to`
 --   off       average mob level above you
 --   elites    estimated elite kills per full clear
+--   xp        known trash XP per run (used instead of the elites formula until you have measured runs)
 --   quests    number of Alliance dungeon quests (for XP estimates)
 --   min       estimated minutes per run
 --   tier      Spelunker achievement (nil = not required)
@@ -24,7 +25,7 @@ ns.XP = {
 --   secret    hidden boss: { boss = name, how = how to summon it }
 --             Quest lists and prerequisites follow Wowhead's Classic dungeon quest guide.
 local ALLIANCE = {
-    { key = "hot", name = "Hall of Thanes", start = 14, to = 17, off = 1, elites = 90, quests = 5, min = 35, tier = "Novice",
+    { key = "hot", name = "Hall of Thanes", start = 14, to = 17, off = 1, elites = 90, xp = 4461, quests = 5, min = 35, tier = "Novice",
       match = { "hall of thanes" },
       note = "Do 'Nip 'Em in the Bud' (Dark Iron Spies, Dun Morogh) for the Dark Iron Map quest.",
       questList = { "Important Heirlooms (Thom Filch, outside)", "The Restless Dead (Afadra Dunwall)",
@@ -480,7 +481,7 @@ for _, d in ipairs(ALLIANCE) do BASE[d.key] = d end
 for k, d in pairs(EXTRA) do BASE[k] = d end
 
 local function CopyStats(src)
-    return { key = src.key, name = src.name, off = src.off, elites = src.elites, min = src.min, tier = src.tier,
+    return { key = src.key, name = src.name, off = src.off, elites = src.elites, xp = src.xp, min = src.min, tier = src.tier,
              match = src.match, subzones = src.subzones, secret = src.secret }
 end
 
