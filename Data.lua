@@ -48,7 +48,7 @@ local ALLIANCE = {
                     "Crest of Lordaeron (inside - may be Horde only)" } },
     { key = "sfk", name = "Shadowfang Keep", start = 21, to = 22, off = 1, elites = 110, quests = 0, min = 45, tier = "Novice",
       match = { "shadowfang" },
-      note = "One run for the Spelunker achievement. Paladin: Jordan's Smithing Hammer.",
+      note = "One run for the Spelunker achievement. Paladin: Jordan's Smithing Hammer. Loot the Black Tome behind Arugal (Dalaran secret boss).",
       questList = { "The Test of Righteousness (paladin only)" } },
     { key = "bfd", name = "Blackfathom Deeps", start = 22, to = 24, off = 1, elites = 110, quests = 5, min = 50, tier = "Experienced",
       match = { "blackfathom" },
@@ -201,7 +201,25 @@ local ALLIANCE = {
 --   pickup   step is just picking up a quest (done once it's in your log)
 --   optional not needed for the main run; left out of the swap estimate
 --   unlocks  follow-up quests (names or IDs); if you have or finished one, the step is done
+--   item     item step instead of a quest: done once that item ID has been in your bags
+--   items    later items in the same chain; having had one also counts the step as done
+--   lootIn   dungeon key where the item drops; the panel reminds you to grab it there
+
+-- City of Dalaran secret boss (both factions): Arugal's Black Tome (SFK) becomes the Tome of
+-- Dalaran at the Ambermill Leyline Focus, which summons Lyn the Ignored inside Dalaran.
+local DALARAN_TOME = {
+    { q = "Black Tome", item = 276561, items = { 275989 }, lootIn = "sfk", optional = true, min = 5,
+      from = "table behind Arugal, Shadowfang Keep",
+      what = "After killing Arugal, take the stairs at the back of his room and loot the Black Tome from the table." },
+    { q = "Tome of Dalaran", item = 275989, optional = true, min = 15,
+      from = "Ambermill Leyline Focus, Silverpine (63.4, 64.3)",
+      what = "Use the Black Tome at the blue crystal next to Archmage Ataeric in the Ambermill town hall. "
+          .. "In Dalaran: past Atrexis the Grave Knight, skip the ramp to the Arcane Anomaly, clear the small room "
+          .. "straight ahead and use the tome on the summoning circle to summon Lyn the Ignored." },
+}
+
 local PREP_ALLIANCE = {
+    dal = DALARAN_TOME,
     hot = {
         { q = "Nip 'Em in the Bud", unlocks = { "Old Ironforge Incursion" }, lvl = 12, min = 25, from = "Earthseer Farsen, Dun Morogh (64.8, 58.5)",
           what = "Kill 10 Dark Iron Spies (~76, 60). One drops the Dark Iron Map - use it and return to Farsen." },
@@ -308,7 +326,7 @@ local HORDE = {
                     "Deviate Hides (Nalpak, above WC entrance) [1486]", "Deviate Eradication (Ebru, above WC entrance) [1487]",
                     "Trouble at the Docks (Crane Operator Bigglefuzz, Ratchet) [959]", "Smart Drinks (Mebok Mizzyrix, Ratchet) [1491]",
                     "The Glowing Shard (drops from Mutanus) [6981]" } },
-    { "sfk", 20, 22, quests = 3, note = "Quests from the Sepulcher (Silverpine) and Undercity.",
+    { "sfk", 20, 22, quests = 3, note = "Quests from the Sepulcher (Silverpine) and Undercity. Loot the Black Tome behind Arugal (Dalaran secret boss).",
       questList = { "Deathstalkers in Shadowfang (High Executor Hadrec, The Sepulcher)", "Arugal Must Die (Dalar Dawnweaver, The Sepulcher)",
                     "The Book of Ur (Keeper Bel'dugur, Undercity Apothecarium)" } },
     { "bfd", 22, 24, quests = 5, note = "Quests from Zoram'gar Outpost (Ashenvale coast).",
@@ -380,6 +398,7 @@ local HORDE = {
 }
 
 local PREP_HORDE = {
+    dal = DALARAN_TOME,
     rfc = {
         { q = "Hidden Enemies", part = 1, parts = 2, lvl = 12, min = 15, from = "Thrall, Orgrimmar Valley of Wisdom",
           what = "First part of Thrall's Hidden Enemies chain (Orgrimmar)." },

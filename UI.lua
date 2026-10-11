@@ -73,6 +73,25 @@ local function AddPrepLines(lines, d, title)
     return true
 end
 
+-- Items to grab for later dungeons: in the recommended dungeon, or the one you're running now.
+local function AddLootLines(lines, d)
+    local here = { d }
+    local run = ns.DB.curRun
+    if run and run.instance then
+        local inst = run.instance:lower()
+        for _, e in ipairs(ns.ROUTE) do
+            for _, m in ipairs(e.match or {}) do
+                if e ~= d and inst:find(m, 1, true) then table.insert(here, e) break end
+            end
+        end
+    end
+    for _, e in ipairs(here) do
+        for _, r in ipairs(ns.LootReminders(e)) do
+            table.insert(lines, ("%sLoot: %s|r %s(%s) - for %s|r"):format(YELLOW, r.step.q, GREY, r.step.from or "", r["for"].name))
+        end
+    end
+end
+
 local function BuildText()
     local DB, S = ns.DB, ns.S
     local lines = {}
@@ -100,6 +119,7 @@ local function BuildText()
         -- Prereqs for this dungeon if you haven't run it yet, then its quests.
         if done == 0 then AddPrepLines(lines, d, "Before your first run:") end
         AddQuestLines(lines, d)
+        AddLootLines(lines, d)
         -- Prereqs for the next dungeon once the swap is close.
         local nextD = ns.ROUTE[d.index + 1]
         if lvl < 60 and lvl >= d.start and nextD and nextD.start < 60

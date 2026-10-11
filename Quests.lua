@@ -191,9 +191,28 @@ function ns.TurnedInCount(key)
     return n
 end
 
+-- Items in your bags or bank. Each item seen is remembered, so a step stays done after the
+-- item is used up (e.g. the Tome of Dalaran once Lyn is summoned).
+local function HaveItem(id)
+    local fn = (C_Item and C_Item.GetItemCount) or GetItemCount
+    if not fn then return false end
+    local ok, n = pcall(fn, id, true)
+    if ok and n and n > 0 then
+        ns.DB.itemsSeen = ns.DB.itemsSeen or {}
+        ns.DB.itemsSeen[id] = true
+    end
+    return ns.DB.itemsSeen and ns.DB.itemsSeen[id] or false
+end
+
 -- Status of one quest step: "done", "inlog" or "todo", plus its quest log entry.
 local function StepStatus(step)
     if ns.DB.questDone and ns.DB.questDone[step.key] == "manual" then return "done" end
+    if step.item then
+        for _, id in ipairs(step.items or {}) do
+            if HaveItem(id) then return "done" end
+        end
+        return HaveItem(step.item) and "done" or "todo"
+    end
     if Unlocked(step) then return "done" end
     if step.id then
         -- Exact: this part's quest ID.
@@ -219,6 +238,19 @@ function ns.PrepSteps(d)
     for i, step in ipairs(d.prep or {}) do
         local status, log = StepStatus(step)
         table.insert(out, { step = step, num = i, status = status, log = log })
+    end
+    return out
+end
+
+-- Item steps for later dungeons that drop in dungeon d and aren't done yet: { step, for = dungeon }.
+function ns.LootReminders(d)
+    local out = {}
+    for _, other in ipairs(ns.ROUTE) do
+        for _, step in ipairs(other.prep or {}) do
+            if step.lootIn == d.key and StepStatus(step) ~= "done" then
+                table.insert(out, { step = step, ["for"] = other })
+            end
+        end
     end
     return out
 end
