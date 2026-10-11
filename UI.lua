@@ -305,6 +305,7 @@ function ns.ApplyLook()
     if not frame then return end
     local S = ns.S
     frame:SetScale(S.scale or 1)
+    frame:EnableMouse(not S.clickThrough) -- click-through: clicks reach the game world
     if frame.SetBackdropColor then
         frame:SetBackdropColor(0, 0, 0, S.bgAlpha or 0.75)
         frame:SetBackdropBorderColor(1, 1, 1, math.min(1, (S.bgAlpha or 0.75) + 0.25))
@@ -394,6 +395,7 @@ local HELP = {
     "/dlc group - what your party (with DLC) still needs",
     "/dlc sync on|off - share your progress with your party",
     "/dlc lock | unlock - lock window position",
+    "/dlc clickthrough - let mouse clicks pass through the panel (toggle)",
     "/dlc faction horde|alliance|auto - pick the route (auto = your character)",
     "/dlc reset confirm - wipe this character's data",
     "Runs are logged automatically when you leave a dungeon.",
@@ -503,6 +505,10 @@ SlashCmdList.DUNGEONLEVELINGCOMPANION = function(input)
         if ns.ScanAchievements then pcall(ns.ScanAchievements) end
         Print(("Using the %s route%s."):format(ns.faction, S.faction and "" or " (auto from your character)"))
         ns.Refresh()
+    elseif cmd == "clickthrough" then
+        S.clickThrough = not S.clickThrough
+        ns.ApplyLook()
+        Print("Click-through " .. (S.clickThrough and "on - /dlc clickthrough or the options turn it off." or "off."))
     elseif cmd == "lock" or cmd == "unlock" then
         S.locked = (cmd == "lock")
         Print("Window " .. cmd .. "ed.")

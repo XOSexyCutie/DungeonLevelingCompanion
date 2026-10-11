@@ -24,6 +24,7 @@ local DEFAULT_SETTINGS = {
     tentThrottle = 120,     -- seconds between repeated tent warnings
     shown = true,
     locked = false,
+    clickThrough = false,   -- panel ignores the mouse (clicks go to the game world)
     scale = 1,              -- panel scale
     bgAlpha = 0.75,         -- panel background opacity
     showBuffs = true,       -- panel sections

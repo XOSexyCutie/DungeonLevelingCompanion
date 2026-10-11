@@ -91,7 +91,7 @@ end
 local function BuildOptions()
     local S, G = ns.S, ns.GDB
     local f = CreateFrame("Frame", "DungeonLevelingCompanionOptions", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    f:SetSize(460, 470)
+    f:SetSize(460, 494)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:SetClampedToScreen(true)
@@ -126,12 +126,14 @@ local function BuildOptions()
     Header("Panel", L, -50)
     Row(Check(f, "Show panel", function() return S.shown end, ns.SetPanelShown), L, -68)
     Row(Check(f, "Lock position", Setting("locked")), L, -92)
+    Row(Check(f, "Click-through", function() return S.clickThrough end, function(v) S.clickThrough = v ns.ApplyLook() end,
+        "Mouse clicks go through the panel to the game world. While on, the panel can't be dragged or right-clicked - use the minimap button or /dlc config to turn it off."), L, -116)
     Row(Slider(f, "Scale", 0.6, 1.5, 0.05, "%.2f", function() return S.scale end,
-        function(v) S.scale = v ns.ApplyLook() end), L + 4, -136)
+        function(v) S.scale = v ns.ApplyLook() end), L + 4, -160)
     Row(Slider(f, "Background opacity", 0, 1, 0.05, "%.2f", function() return S.bgAlpha end,
-        function(v) S.bgAlpha = v ns.ApplyLook() end), L + 4, -180)
+        function(v) S.bgAlpha = v ns.ApplyLook() end), L + 4, -204)
 
-    Header("Show on the panel", L, -212)
+    Header("Show on the panel", L, -236)
     local sections = {
         { "showPrep", "Prerequisite quests" },
         { "showQuests", "Dungeon quests" },
@@ -142,7 +144,7 @@ local function BuildOptions()
     }
     for i, s in ipairs(sections) do
         local get, set = Setting(s[1])
-        Row(Check(f, s[2], get, set), L, -230 - (i - 1) * 24)
+        Row(Check(f, s[2], get, set), L, -254 - (i - 1) * 24)
     end
 
     -- Right column: alerts, group, minimap, route.

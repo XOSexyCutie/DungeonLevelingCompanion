@@ -611,3 +611,12 @@ run('state.level = 32; state.xp = 0'); lines = panel()
 check("panel shows measured minutes", any("45m/run (measured)" in l for l in lines) or ns.Recommend()[0].key != "dal", [l for l in lines if "m/run" in l])
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
+
+# --- 19. Click-through toggle ---
+run('DungeonLevelingCompanionFrame.EnableMouse = function(self, v) self.mouse = v end')
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("clickthrough")'); out = take("chat")
+check("/dlc clickthrough -> panel ignores the mouse", G.DungeonLevelingCompanionFrame.mouse is False and G.DungeonLevelingCompanionDB.settings.clickThrough, out)
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("clickthrough")'); take("chat")
+check("toggle again -> mouse back on", G.DungeonLevelingCompanionFrame.mouse is True)
+check("no errors", not take("errors"))
+print("\nFAILURES:", fails)
