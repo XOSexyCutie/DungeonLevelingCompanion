@@ -10,3 +10,4 @@ ignore:
   - README.md
   - .pkgmeta
   - media
+  - .github
