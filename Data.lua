@@ -15,7 +15,7 @@ ns.XP = {
 --   start/to  leg: run this dungeon from level `start` until level `to`
 --   off       average mob level above you
 --   elites    estimated elite kills per full clear
---   xp        known trash XP per run (used instead of the elites formula until you have measured runs)
+--   xp        starting XP-per-run estimate instead of the elites formula (calibrated, then replaced by your own runs)
 --   quests    number of Alliance dungeon quests (for XP estimates)
 --   min       estimated minutes per run
 --   tier      Spelunker achievement (nil = not required)

@@ -631,3 +631,15 @@ check("measured runs still win", xp == 5000 and measured, (xp, measured))
 run('DungeonLevelingCompanionDB.measured.hot = nil')
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
+
+# --- 21. HoT estimate recalibrates from the group's real runs ---
+run('wipe(DungeonLevelingCompanionDB.measured); DungeonLevelingCompanionDB.settings.calibOverride = nil')
+dm_base = ns.XPPerRun(ns.BY_KEY.dm)[0]
+run('DungeonLevelingCompanionDB.measured.hot = { 4000, 4000, 4000, 3000, 3000, 3000 }')
+xp, measured = ns.XPPerRun(ns.BY_KEY.hot)
+check("HoT follows the latest 3 runs as you level", xp == 3000 and measured, (xp, measured))
+dm_now = ns.XPPerRun(ns.BY_KEY.dm)[0]
+check("HoT runs below 4461 scale later estimates down", abs(dm_now - dm_base * 3000 / 4461) < 0.01, (dm_base, dm_now))
+run('wipe(DungeonLevelingCompanionDB.measured)')
+check("no errors", not take("errors"))
+print("\nFAILURES:", fails)

@@ -283,12 +283,17 @@ ns.FoodStatus, ns.TentCooldown, ns.RestedFrac, ns.BagStatus = FoodStatus, TentCo
 ---------------------------------------------------------------------------
 -- Estimates (same math as the Google Sheet)
 ---------------------------------------------------------------------------
-local function Avg(t)
+-- Average of the last `n` entries (all if n is nil).
+local function Avg(t, n)
     if not t or #t == 0 then return nil end
+    local first = n and math.max(1, #t - n + 1) or 1
     local s = 0
-    for _, v in ipairs(t) do s = s + v end
-    return s / #t
+    for i = first, #t do s = s + t[i] end
+    return s / (#t - first + 1)
 end
+
+-- Per-run XP falls as you outlevel a dungeon, so only the latest runs count.
+local RECENT_RUNS = 3
 
 local function RawTrash(d)
     local L = (d.start + d.to) / 2
@@ -305,26 +310,31 @@ local function KillBonus(d)
     return 1 + S.foodBonus + BagBonus(d)
 end
 
+-- Starting estimate for a run before calibration: the known figure (d.xp) or the formula.
+local function Baseline(d)
+    return d.xp or RawTrash(d) * KillBonus(d)
+end
+
 function ns.Calibration()
     if S.calibOverride then return S.calibOverride end
     local measured, formula = 0, 0
     for _, d in ipairs(ROUTE) do
-        local avg = Avg(DB.measured[d.key])
+        local avg = Avg(DB.measured[d.key], RECENT_RUNS)
         if avg then
             measured = measured + avg
-            formula = formula + RawTrash(d) * KillBonus(d)
+            formula = formula + Baseline(d)
         end
     end
     if formula > 0 then return measured / formula end
     return 1
 end
 
--- Measured average if you have one, else the known per-run XP (d.xp), else the calibrated formula.
+-- Your own latest runs once you have them, else the estimate scaled by how your group's
+-- measured runs compare with their estimates (Calibration).
 function ns.XPPerRun(d)
-    local avg = Avg(DB.measured[d.key])
+    local avg = Avg(DB.measured[d.key], RECENT_RUNS)
     if avg then return avg, true end
-    if d.xp then return d.xp, false end
-    return RawTrash(d) * ns.Calibration() * KillBonus(d), false
+    return Baseline(d) * ns.Calibration(), false
 end
 
 -- Minutes per run: measured start-to-start time once you have it, else the estimate.
