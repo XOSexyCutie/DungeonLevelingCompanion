@@ -151,7 +151,9 @@ local function BuildText()
             local tent = ns.TentPerRun(d)
             table.insert(lines, ("%sNow:|r %s%s|r  (%d-%d)"):format(YELLOW, WHITE, d.name, d.start, d.to))
             table.insert(lines, ("  ~%d more run%s to %d  |  done: %d"):format(left, left == 1 and "" or "s", d.to, done))
-            table.insert(lines, ("  %s%d XP/run%s + %d tent, ~%dm/run|r"):format(GREY, math.floor(perRun + 0.5), measured and " (measured)" or "", math.floor(tent + 0.5), d.min))
+            local runMin, timed = ns.RunMinutes(d)
+            table.insert(lines, ("  %s%d XP/run%s + %d tent, ~%dm/run%s|r"):format(GREY, math.floor(perRun + 0.5), measured and " (measured)" or "",
+                math.floor(tent + 0.5), math.floor(runMin + 0.5), timed and " (measured)" or ""))
             local prepXP = ns.LegPrepXP(d)
             if prepXP > 0 then
                 table.insert(lines, ("  %s(counts ~%dk XP from prereq quests)|r"):format(GREY, math.floor(prepXP / 1000 + 0.5)))
@@ -454,7 +456,7 @@ SlashCmdList.DUNGEONLEVELINGCOMPANION = function(input)
         local d = ns.FindDungeon(rest)
         if not DB.pending then Print("No unassigned run.")
         elseif not d then Print("Unknown dungeon: " .. rest)
-        else ns.RecordRun(d, DB.pending.xp, DB.pending.level) DB.pending = nil end
+        else ns.RecordRun(d, DB.pending.xp, DB.pending.level, DB.pending.start) DB.pending = nil end
     elseif cmd == "undo" then
         ns.UndoLast()
     elseif cmd == "set" then
@@ -507,6 +509,7 @@ SlashCmdList.DUNGEONLEVELINGCOMPANION = function(input)
     elseif cmd == "reset" then
         if rest == "confirm" then
             wipe(DB.runs) wipe(DB.measured) wipe(DB.log)
+            DB.cycle, DB.lastRunStart = {}, nil
             DB.curRun, DB.pending = nil, nil
             Print("Data wiped for this character.")
             ns.Refresh()

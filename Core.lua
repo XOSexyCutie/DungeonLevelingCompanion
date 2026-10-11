@@ -322,11 +322,18 @@ function ns.XPPerRun(d)
     return Avg(DB.measured[d.key]) or RawTrash(d) * ns.Calibration() * KillBonus(d), Avg(DB.measured[d.key]) ~= nil
 end
 
+-- Minutes per run: measured start-to-start time once you have it, else the estimate.
+function ns.RunMinutes(d)
+    local avg = Avg(DB.cycle and DB.cycle[d.key])
+    if avg then return avg / 60, true end
+    return d.min, false
+end
+
 function ns.TentPerRun(d)
     if not S.useTent then return 0 end
     local lvl = math.floor((d.start + d.to) / 2)
     local need = XP[lvl] or 0
-    return math.min(ns.XPPerRun(d), S.tentFrac * need * S.tentPerHour * d.min / 60)
+    return math.min(ns.XPPerRun(d), S.tentFrac * need * S.tentPerHour * ns.RunMinutes(d) / 60)
 end
 
 -- XP from d's dungeon quests you haven't finished yet (finished ones aren't counted).
@@ -455,14 +462,29 @@ end
 ---------------------------------------------------------------------------
 -- Recording runs
 ---------------------------------------------------------------------------
-function ns.RecordRun(d, xp, level)
+-- Run time for the tent estimate = start of one run to the start of the next run of the same
+-- dungeon, so resets, walking back in and waiting for people count too. Gaps over 2 hours
+-- (breaks, logging off) and dungeon swaps aren't measured.
+local MIN_CYCLE, MAX_CYCLE = 5 * 60, 2 * 3600
+
+function ns.RecordRun(d, xp, level, start)
     DB.runs[d.key] = (DB.runs[d.key] or 0) + 1
+    local gap
+    local last = DB.lastRunStart
+    if start and last and last.key == d.key and start - last.t >= MIN_CYCLE and start - last.t <= MAX_CYCLE then
+        gap = start - last.t
+        DB.cycle = DB.cycle or {}
+        DB.cycle[d.key] = DB.cycle[d.key] or {}
+        table.insert(DB.cycle[d.key], gap)
+        while #DB.cycle[d.key] > 10 do table.remove(DB.cycle[d.key], 1) end
+    end
+    DB.lastRunStart = start and { key = d.key, t = start } or nil
     if xp and xp > 0 and (level or 0) < MAX_LEVEL then
         DB.measured[d.key] = DB.measured[d.key] or {}
         table.insert(DB.measured[d.key], xp)
         while #DB.measured[d.key] > 10 do table.remove(DB.measured[d.key], 1) end
     end
-    table.insert(DB.log, { key = d.key, xp = xp or 0, level = level, t = time() })
+    table.insert(DB.log, { key = d.key, xp = xp or 0, level = level, t = time(), gap = gap })
     while #DB.log > 200 do table.remove(DB.log, 1) end
     local msg = ("Logged %s run #%d"):format(d.name, DB.runs[d.key])
     if xp and xp > 0 then msg = msg .. (" (%d trash XP, rested bonus excluded)"):format(xp) end
@@ -485,6 +507,13 @@ function ns.UndoLast()
             if m[i] == last.xp then table.remove(m, i) break end
         end
     end
+    local c = DB.cycle and DB.cycle[last.key]
+    if c and last.gap then
+        for i = #c, 1, -1 do
+            if c[i] == last.gap then table.remove(c, i) break end
+        end
+    end
+    DB.lastRunStart = nil
     Print(("Removed the last %s run."):format(d and d.name or last.key))
     if ns.Refresh then ns.Refresh() end
 end
@@ -513,7 +542,7 @@ local function FinishRun()
     if run.xp <= 0 and duration < 600 then return end -- too short to count (zoned in and out)
     local d = ResolveRun(run)
     if d then
-        ns.RecordRun(d, run.xp, run.level)
+        ns.RecordRun(d, run.xp, run.level, run.start)
     else
         DB.pending = run
         Print(("Finished a run in %s but couldn't tell which wing. Type |cffffff00/dlc assign <dungeon>|r (e.g. /dlc assign smlib)."):format(run.instance))
