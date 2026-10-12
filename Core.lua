@@ -280,6 +280,11 @@ end
 
 ns.FoodStatus, ns.TentCooldown, ns.RestedFrac, ns.BagStatus = FoodStatus, TentCooldown, RestedFrac, BagStatus
 
+function ns.HasSleepingBag()
+    local ok, owned = pcall(FindSleepingBag)
+    return ok and owned or false
+end
+
 ---------------------------------------------------------------------------
 -- Estimates (same math as the Google Sheet)
 ---------------------------------------------------------------------------
@@ -300,8 +305,10 @@ local function RawTrash(d)
     return d.elites * (5 * L + 45) * (1 + S.mobPerLevel * d.off) * S.eliteMult * S.groupShare
 end
 
--- Sleeping bag bonus for a leg: assumed active once the group reaches bagLevel.
+-- Sleeping bag bonus for a leg: active for legs still ahead once you own the bag, else
+-- assumed from bagLevel (the chain finishes on the walk to Ruins of Lordaeron, ~20).
 local function BagBonus(d)
+    if d.to > UnitLevel("player") and ns.HasSleepingBag() then return S.bagBonus end
     return ((d.start + d.to) / 2 >= S.bagLevel) and S.bagBonus or 0
 end
 

@@ -207,6 +207,7 @@ end
 -- Status of one quest step: "done", "inlog" or "todo", plus its quest log entry.
 local function StepStatus(step)
     if ns.DB.questDone and ns.DB.questDone[step.key] == "manual" then return "done" end
+    if step.bag and ns.HasSleepingBag and ns.HasSleepingBag() then return "done" end
     if step.item then
         for _, id in ipairs(step.items or {}) do
             if HaveItem(id) then return "done" end

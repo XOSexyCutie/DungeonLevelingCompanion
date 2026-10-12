@@ -151,6 +151,11 @@ local function BuildText()
             local tent = ns.TentPerRun(d)
             table.insert(lines, ("%sNow:|r %s%s|r  (%d-%d)"):format(YELLOW, WHITE, d.name, d.start, d.to))
             table.insert(lines, ("  ~%d more run%s to %d  |  done: %d"):format(left, left == 1 and "" or "s", d.to, done))
+            -- The next dungeon's prereq XP covers the rest of the leg: stop and go do them.
+            local nextD = ns.ROUTE[d.index + 1]
+            if left == 0 and nextD and nextD.start < 60 and ns.PrepLeft(nextD) > 0 then
+                table.insert(lines, ("  %sEnough runs - do the prereqs for %s now, they get you to %d|r"):format(GREEN, nextD.name, d.to))
+            end
             local runMin, timed = ns.RunMinutes(d)
             table.insert(lines, ("  %s%d XP/run%s + %d tent, ~%dm/run%s|r"):format(GREY, math.floor(perRun + 0.5), measured and " (measured)" or "",
                 math.floor(tent + 0.5), math.floor(runMin + 0.5), timed and " (measured)" or ""))

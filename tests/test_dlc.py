@@ -308,7 +308,7 @@ left_with = ns.RunsLeft(ns.BY_KEY.hot)
 # chain progress: parts 65,132 done, 135 in log 2/5
 run('state.flagged[65] = true; state.flagged[132] = true; state.questLog = { { title = "The Defias Brotherhood", id = 135, complete = false, have = 2, need = 5 } }'); qlog()
 p = panel()
-check("parts 1-2 [x], part 3 in log with progress", any("[x] 1. The Defias Brotherhood (1/6)" in l for l in p) and any("[x] 2. The Defias Brotherhood (2/6)" in l for l in p) and any("[ ] 3. The Defias Brotherhood (3/6) 2/5" in l for l in p), [l for l in p if "Defias" in l])
+check("parts 1-2 [x], part 3 in log with progress", any("[x] 2. The Defias Brotherhood (1/6)" in l for l in p) and any("[x] 3. The Defias Brotherhood (2/6)" in l for l in p) and any("[ ] 4. The Defias Brotherhood (3/6) 2/5" in l for l in p), [l for l in p if "Defias" in l])
 xp_prep2, _ = ns.PrepLeft(ns.BY_KEY.dm)
 check("prep XP drops as parts finish (680+340+1350+1700)", xp_prep2 == 4070, xp_prep2)
 check("HoT leg counts the remaining DM prep XP", ns.LegPrepXP(ns.BY_KEY.hot) == 4070, ns.LegPrepXP(ns.BY_KEY.hot))
@@ -641,5 +641,46 @@ check("HoT follows the latest 3 runs as you level", xp == 3000 and measured, (xp
 dm_now = ns.XPPerRun(ns.BY_KEY.dm)[0]
 check("HoT runs below 4461 scale later estimates down", abs(dm_now - dm_base * 3000 / 4461) < 0.01, (dm_base, dm_now))
 run('wipe(DungeonLevelingCompanionDB.measured)')
+check("no errors", not take("errors"))
+print("\nFAILURES:", fails)
+
+# --- 22. Cozy Sleeping Bag chain: Westfall pickup (DM prep), Barrens/Stonetalon (WC), Loch Modan/Hillsbrad (RoL) ---
+run('SlashCmdList.DUNGEONLEVELINGCOMPANION("reset confirm"); state.questLog = {}; state.flagged = {}; state.bag = false; '
+    'DungeonLevelingCompanionDB.questDone = {}; DungeonLevelingCompanionDB.questIDs = {}; DungeonLevelingCompanionDB.turnedIn = {}; '
+    'DungeonLevelingCompanionDB.achDone = {}'); take("chat")
+run('state.level = 16; state.xp = 0; DungeonLevelingCompanionDB.runs.hot = 2'); qlog(); ns.MarkBagsDirty()
+def steps(k): return [(s.step.q, s.status) for s in ns.PrepSteps(ns.BY_KEY[k]).values()]
+check("DM prep starts with the note pickup", steps("dm")[0] == ("...and that note you found", "todo"), steps("dm")[:2])
+check("DM prep XP unchanged by the pickup (6100)", ns.PrepLeft(ns.BY_KEY.dm)[0] == 6100, ns.PrepLeft(ns.BY_KEY.dm))
+wc_xp = ns.PrepLeft(ns.BY_KEY.wc)[0]
+check("WC prep = Raptor Horns 1275 + 3150 + 3150 + 315", wc_xp == 1275 + 6615, wc_xp)
+check("RoL prep = 3150 + 3150 + 2350", ns.PrepLeft(ns.BY_KEY.rol)[0] == 8650, ns.PrepLeft(ns.BY_KEY.rol))
+check("DM leg counts the WC prep (bag Barrens/Stonetalon)", ns.LegPrepXP(ns.BY_KEY.dm) == 6100 + 7890, ns.LegPrepXP(ns.BY_KEY.dm))
+# note picked up in Westfall: DM step done, WC step 'in log'
+run('state.questLog = { { title = "...and that note you found", id = 96500, complete = false } }'); qlog()
+check("note in log -> DM pickup done", steps("dm")[0][1] == "done", steps("dm")[0])
+check("note in log -> WC turn-in step in log", steps("wc")[1] == ("...and that note you found", "inlog"), steps("wc"))
+# Wet Job in log -> everything before it done, RoL Wet Job in log
+run('state.questLog = { { title = "Wet Job", id = 96503, complete = false } }'); qlog()
+wc = [s for s in steps("wc") if s[0] != "Raptor Horns" and s[0] != "Rekindle"]
+check("Wet Job in log -> Barrens/Stonetalon steps done", all(st == "done" for _, st in wc), wc)
+check("Wet Job in log -> RoL first step in log", steps("rol")[0] == ("Wet Job", "inlog"), steps("rol"))
+check("RoL prep XP still counts Wet Job until turned in (8650)", ns.PrepLeft(ns.BY_KEY.rol)[0] == 8650, ns.PrepLeft(ns.BY_KEY.rol))
+# owning the bag (finished before install) -> every bag step done
+run('state.questLog = {}; state.bag = true'); qlog(); ns.MarkBagsDirty()
+check("bag owned -> RoL prep empty", len(list(ns.PrepOpen(ns.BY_KEY.rol).values())) == 0)
+check("bag owned -> WC only Raptor Horns left", [s.step.q for s in ns.PrepOpen(ns.BY_KEY.wc).values()] == ["Raptor Horns"])
+# bag bonus applies to the current leg once you own it
+run('state.level = 17; state.xp = 0'); ns.MarkBagsDirty()
+with_bag = ns.QuestXP(ns.BY_KEY.dm)
+run('state.bag = false'); ns.MarkBagsDirty()
+without = ns.QuestXP(ns.BY_KEY.dm)
+check("owning the bag adds 3% to the DM leg", abs(with_bag / without - 1.03) < 1e-9, (with_bag, without))
+# 'enough runs' line when the next dungeon's prep covers the rest of the leg
+run('state.level = 16; state.xp = 15000; DungeonLevelingCompanionDB.runs.hot = 5')
+for q in ns.BY_KEY.hot.questInfo.values(): G.DungeonLevelingCompanionDB.questDone[q.key] = "manual"
+qlog()
+p = panel(); print("\n".join(p[:6]))
+check("0 HoT runs left -> 'do the prep now' line", ns.RunsLeft(ns.BY_KEY.hot) == 0 and any("Enough runs - do the prereqs for The Deadmines now" in l for l in p), ns.RunsLeft(ns.BY_KEY.hot))
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)

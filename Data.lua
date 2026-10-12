@@ -33,19 +33,19 @@ local ALLIANCE = {
                     "The Treaty of Understanding (tablet in final boss vault)" } },
     { key = "dm", name = "The Deadmines", start = 17, to = 19, off = 1, elites = 130, quests = 6, min = 50, tier = "Novice",
       match = { "deadmines" },
-      note = "Finish the Defias Brotherhood chain first. Paladin: Whitestone Oak Lumber.",
+      note = "Finish the Defias Brotherhood chain first; grab the sleeping bag note in Westfall. Paladin: Whitestone Oak Lumber.",
       questList = { "The Defias Brotherhood (Gryan Stoutmantle, Sentinel Hill) [166]", "Red Silk Bandanas (Scout Riell, Sentinel Hill) [214]",
                     "Collecting Memories (Wilder Thistlenettle, SW Dwarven District) [168]", "Oh Brother. . . (Wilder Thistlenettle, SW Dwarven District) [167]",
                     "Underground Assault (Shoni the Shilent, SW Dwarven District) [2040]", "The Unsent Letter (drops from VanCleef) [373]" } },
     { key = "wc", name = "Wailing Caverns", start = 19, to = 20, off = 1, elites = 130, quests = 5, min = 55, tier = "Novice",
       match = { "wailing caverns" },
-      note = "Neutral quests from Ratchet. Deviate hides for skinning/LW.",
+      note = "Neutral quests from Ratchet. Sleeping bag: Barrens tower + Stonetalon on the way. Deviate hides for skinning/LW.",
       questList = { "Deviate Hides (Nalpak, above WC entrance) [1486]", "Deviate Eradication (Ebru, above WC entrance) [1487]",
                     "Trouble at the Docks (Crane Operator Bigglefuzz, Ratchet) [959]", "Smart Drinks (Mebok Mizzyrix, Ratchet) [1491]",
                     "The Glowing Shard (drops from Mutanus) [6981]" } },
     { key = "rol", name = "Ruins of Lordaeron", start = 20, to = 21, off = 1, elites = 120, quests = 4, min = 45, tier = "Novice",
       match = { "ruins of lordaeron" },
-      note = "Long walk for Alliance. Pair with SFK. Quests are picked up inside.",
+      note = "Long walk for Alliance (Loch Modan dam + Thoradin's Wall finish the sleeping bag). Pair with SFK. Quests are picked up inside.",
       secret = { boss = "Viktor the Vile", how = "After Rath'mael: take the Soul Flame from the brazier behind his altar to the brazier by the southwest sewer gate, then survive the waves. Guides differ on the details." },
       questList = { "Abominable Creatures (Captain Truman, entrance)", "Bloodied Insignia (drops inside)", "Remember That I Love You (inside)",
                     "Crest of Lordaeron (inside - may be Horde only)" } },
@@ -222,6 +222,50 @@ local DALARAN_TOME = {
           .. "straight ahead and use the tome on the summoning circle to summon Lyn the Ignored." },
 }
 
+-- Cozy Sleeping Bag (Alliance): picked up in Westfall during the Defias chain, Barrens and
+-- Stonetalon on the way to WC, Loch Modan and Thoradin's Wall on the walk to RoL. The quests
+-- are level 40 (full XP at any level): 3150 each, Scramble 315, the last one 2350 (Wowhead).
+-- Tracked by name: Forever's quest IDs differ from Season of Discovery's.
+-- `bag` steps also count as done once you own the Cozy Sleeping Bag.
+local BAG_QUESTS = { "Stepping Stones", "Scramble", "Wet Job", "Eagle's Fist", "This Must Be The Place" }
+local function After(name)
+    local out, found = {}, false
+    for _, q in ipairs(BAG_QUESTS) do
+        if found then table.insert(out, q) end
+        if q == name then found = true end
+    end
+    return out
+end
+local BAG_PICKUP = {
+    { q = "...and that note you found", pickup = true, bag = true, min = 5, unlocks = BAG_QUESTS,
+      from = "Burned-out remains in the wrecked cart, Alexston Farmstead, Westfall (37.1, 50.1)",
+      what = "Cozy Sleeping Bag chain: pick up the note while you're in Westfall. The rest is on the way to WC and RoL." },
+}
+local BAG_BARRENS = {
+    { q = "...and that note you found", xp = 3150, bag = true, min = 15, unlocks = BAG_QUESTS,
+      from = "Burned tower south of Camp Taurajo, The Barrens (46.1, 74.3)",
+      what = "From Ratchet, head south to the burned tower and click the Burned-out Remains." },
+    { q = "Stepping Stones", xp = 3150, bag = true, min = 20, unlocks = After("Stepping Stones"),
+      from = "Abandoned camp past Sun Rock Retreat, Stonetalon (40.6, 52.4)",
+      what = "Follow the hill path northeast of Sun Rock Retreat (50.9, 52.3) to the camp; click the Pocket Litter on the crate." },
+    { q = "Rekindle", optional = true, bag = true, min = 2, from = "Campfire at the same camp",
+      what = "Use the Flint and Tinder + Simple Wood from the Pocket Litter on the campfire. Optional." },
+    { q = "Scramble", xp = 315, bag = true, min = 5, unlocks = After("Scramble"),
+      from = "Mound of Dirt on the hill north of the camp (39.6, 49.8)",
+      what = "Drop carefully onto the Mound of Dirt - miss and you fall into the ravine." },
+}
+local BAG_ROL = {
+    { q = "Wet Job", xp = 3150, bag = true, min = 10, unlocks = After("Wet Job"),
+      from = "Carved figurine on the Stonewrought Dam, Loch Modan (49.4, 12.9)",
+      what = "Walk the dam to the middle and drop onto the ledge with the eagle figurine (on the way to the Wetlands)." },
+    { q = "Eagle's Fist", xp = 3150, bag = true, min = 10, unlocks = After("Eagle's Fist"),
+      from = "Messenger Bag on Thoradin's Wall, Hillsbrad side (87.3, 49.6)",
+      what = "Coming from Arathi: climb onto the wall from the leaning cart, follow it to the small platform and click the Messenger Bag." },
+    { q = "This Must Be The Place", xp = 2350, bag = true, min = 2,
+      from = "Hastily Rolled-Up Satchel, just below the Messenger Bag",
+      what = "Click the satchel: Cozy Sleeping Bag + 5 Student Fodder. Lie on it 3 min for Well-Rested (+3% XP)." },
+}
+
 local PREP_ALLIANCE = {
     dal = DALARAN_TOME,
     hot = {
@@ -230,6 +274,7 @@ local PREP_ALLIANCE = {
     },
     -- Verified on Wowhead: quest IDs 65 > 132 > 135 > 141 > 142 > 155, then 166 (VanCleef) and Red Silk Bandanas.
     dm = {
+        BAG_PICKUP[1],
         { q = "The Defias Brotherhood", id = 65, part = 1, parts = 6, xp = 1350, min = 15, unlocks = { 166, 214 },
           from = "Gryan Stoutmantle, Sentinel Hill", what = "Talk to Wiley the Black in the Lakeshire inn (Redridge)." },
         { q = "The Defias Brotherhood", id = 132, part = 2, parts = 6, xp = 680, min = 15, unlocks = { 166, 214 },
@@ -245,7 +290,9 @@ local PREP_ALLIANCE = {
     },
     wc = {
         { q = "Raptor Horns", unlocks = { 1491 }, lvl = 17, min = 20, from = "Mebok Mizzyrix, Ratchet", what = "Intact Raptor Horns from Barrens raptors. Unlocks Smart Drinks." },
+        BAG_BARRENS[1], BAG_BARRENS[2], BAG_BARRENS[3], BAG_BARRENS[4],
     },
+    rol = BAG_ROL,
     bfd = {
         { q = "In Search of Thaelrid", unlocks = { 1200 }, pickup = true, min = 10, from = "Dawnwatcher Shaedlass, Darnassus",
           what = "Pick up; find Argent Guard Thaelrid inside BFD. Unlocks Blackfathom Villainy." },
