@@ -1,10 +1,11 @@
 # DLC – Dungeon Leveling Companion Changelog
 
-## Unreleased
+## 1.2.0
 
 - Cozy Sleeping Bag chain tracked as prereq steps along the route: pick up the note in Westfall (Deadmines prep), Barrens tower + Stonetalon camp on the way to Wailing Caverns, Loch Modan dam + Thoradin's Wall on the walk to Ruins of Lordaeron. Its 15,265 quest XP counts toward when to swap dungeons.
 - Owning the sleeping bag marks the chain done and adds its +3% to the estimates for the legs still ahead.
 - When the next dungeon's prereq XP covers the rest of a leg, the panel says to stop running and go do the prereqs.
+- Crest of Lordaeron is listed for Alliance too (it isn't Horde only).
 
 ## 1.1.0
 

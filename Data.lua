@@ -48,7 +48,7 @@ local ALLIANCE = {
       note = "Long walk for Alliance (Loch Modan dam + Thoradin's Wall finish the sleeping bag). Pair with SFK. Quests are picked up inside.",
       secret = { boss = "Viktor the Vile", how = "After Rath'mael: take the Soul Flame from the brazier behind his altar to the brazier by the southwest sewer gate, then survive the waves. Guides differ on the details." },
       questList = { "Abominable Creatures (Captain Truman, entrance)", "Bloodied Insignia (drops inside)", "Remember That I Love You (inside)",
-                    "Crest of Lordaeron (inside - may be Horde only)" } },
+                    "Crest of Lordaeron (found inside)" } },
     { key = "sfk", name = "Shadowfang Keep", start = 21, to = 22, off = 1, elites = 110, quests = 0, min = 45, tier = "Novice",
       match = { "shadowfang" },
       note = "One run for the Spelunker achievement. Paladin: Jordan's Smithing Hammer. Loot the Black Tome behind Arugal (Dalaran secret boss).",
