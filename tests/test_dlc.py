@@ -362,7 +362,7 @@ run('state.level = 19'); qlog(); d, _ = ns.Recommend(); steps = [s.step.q for s 
 check("Horde WC prereqs include The Forgotten Pools chain", d.key == "wc" and "The Forgotten Pools" in steps, (d.key, steps))
 run('state.questLog = { { title = "Leaders of the Fang", id = 1, complete = false } }'); qlog()
 steps = [s.step.q for s in ns.PrepOpen(ns.BY_KEY.wc).values()]
-check("Leaders of the Fang in log -> Forgotten Pools chain done", steps == ["Raptor Horns"], steps)
+check("Leaders of the Fang in log -> Forgotten Pools chain done", steps == ["Raptor Horns", "...and that note you found"], steps)
 run('DungeonLevelingCompanionDB.achIDs = nil'); ns.ScanAchievements()
 check("achievement 'RFC or Hall of Thanes' maps to rfc for Horde", G.DungeonLevelingCompanionDB.achDone.rfc == True, list(G.DungeonLevelingCompanionDB.achDone.keys()))
 check("Horde Novice 6/6 from achievement", ns.TierProgress("Novice")[0] == 6, ns.TierProgress("Novice"))
@@ -682,5 +682,32 @@ for q in ns.BY_KEY.hot.questInfo.values(): G.DungeonLevelingCompanionDB.questDon
 qlog()
 p = panel(); print("\n".join(p[:6]))
 check("0 HoT runs left -> 'do the prep now' line", ns.RunsLeft(ns.BY_KEY.hot) == 0 and any("Enough runs - do the prereqs for The Deadmines now" in l for l in p), ns.RunsLeft(ns.BY_KEY.hot))
+check("no errors", not take("errors"))
+print("\nFAILURES:", fails)
+
+# --- 23. Cozy Sleeping Bag chain, Horde: Barrens pickup (WC), Westfall (DM), Stonetalon (RFK), dam + wall (Excavation Site) ---
+run('state.faction = "Horde"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto"); SlashCmdList.DUNGEONLEVELINGCOMPANION("reset confirm"); '
+    'state.questLog = {}; state.flagged = {}; state.bag = false; DungeonLevelingCompanionDB.questDone = {}; '
+    'DungeonLevelingCompanionDB.questIDs = {}; DungeonLevelingCompanionDB.turnedIn = {}; DungeonLevelingCompanionDB.achDone = {}'); take("chat")
+run('state.level = 19; state.xp = 0'); qlog(); ns.MarkBagsDirty()
+bagq = {"...and that note you found", "Stepping Stones", "Rekindle", "Scramble", "Wet Job", "Eagle's Fist", "This Must Be The Place"}
+def bagsteps(k): return [s for s in steps(k) if s[0] in bagq]
+check("Horde WC prep ends with the note pickup", steps("wc")[-1] == ("...and that note you found", "todo"), steps("wc")[-2:])
+check("Horde DM prep = Westfall turn-in (3150)", bagsteps("dm") == [("...and that note you found", "todo")] and ns.PrepLeft(ns.BY_KEY.dm)[0] == 3150, steps("dm"))
+check("Horde RFK prep = Stonetalon (3150 + 315)", [q for q, _ in bagsteps("rfk")] == ["Stepping Stones", "Rekindle", "Scramble"] and ns.PrepLeft(ns.BY_KEY.rfk)[0] == 3465, steps("rfk"))
+check("Horde Excavation prep = Dragonmaw Rumors then dam + wall", [q for q, _ in steps("exc")] == ["Dragonmaw Rumors", "Wet Job", "Eagle's Fist", "This Must Be The Place"], steps("exc"))
+check("no bag steps on Horde Ruins of Lordaeron", bagsteps("rol") == [], steps("rol"))
+# note in log: WC pickup done, DM turn-in in log
+run('state.questLog = { { title = "...and that note you found", id = 79007, complete = false } }'); qlog()
+check("Horde note in log -> WC pickup done, DM turn-in in log", steps("wc")[-1][1] == "done" and steps("dm")[0] == ("...and that note you found", "inlog"), (steps("wc")[-1], steps("dm")))
+# bag bonus starts at the Excavation Site for Horde, at Ruins for Alliance
+run('state.questLog = {}; state.level = 14'); qlog(); ns.MarkBagsDirty()
+check("Horde bag finishes in Excavation Site prep", ns.ROUTE[ns.bagIndex].key == "exc", ns.bagIndex)
+base_rfk = ns.QuestXP(ns.BY_KEY.rfk); base_exc = ns.QuestXP(ns.BY_KEY.exc)
+run('state.faction = "Alliance"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
+check("Alliance bag finishes in Ruins of Lordaeron prep", ns.ROUTE[ns.bagIndex].key == "rol", ns.bagIndex)
+run('state.faction = "Horde"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
+check("Horde RFK leg has no bag bonus yet", abs(base_rfk - ns.BY_KEY.rfk.quests * 26 * 125 * 1.25) < 1e-6, base_rfk)
+check("Horde Excavation leg gets the bag bonus", abs(base_exc / (ns.BY_KEY.exc.quests * 28 * 125 * 1.25) - 1.03) < 1e-9, base_exc)
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)

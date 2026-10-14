@@ -12,7 +12,6 @@ local DEFAULT_SETTINGS = {
     foodBonus = 0.05,       -- Well Fed: +5% XP from kills
     warnBag = true,         -- warn when you own the Cozy Sleeping Bag but Well-Rested is missing
     bagBonus = 0.03,        -- Well-Rested: +1% XP per stack, 3 stacks
-    bagLevel = 20,          -- level the group expects to finish the sleeping bag chain (for estimates)
     bagThrottle = 120,      -- seconds between repeated sleeping bag warnings
     groupShare = 0.28,      -- classic 5-man XP share per person
     eliteMult = 2,
@@ -55,6 +54,7 @@ local function InitDB()
     S = DB.settings
     ns.DB, ns.S = DB, S
     S.warnMinLevel = nil -- moved to the account-wide settings below
+    S.bagLevel = nil     -- the route now knows where each faction finishes the sleeping bag
 
     -- Account-wide settings (shared by all your characters).
     DungeonLevelingCompanionGlobalDB = DungeonLevelingCompanionGlobalDB or {}
@@ -306,10 +306,11 @@ local function RawTrash(d)
 end
 
 -- Sleeping bag bonus for a leg: active for legs still ahead once you own the bag, else
--- assumed from bagLevel (the chain finishes on the walk to Ruins of Lordaeron, ~20).
+-- assumed from the leg whose prereqs finish the chain (Alliance: Ruins of Lordaeron,
+-- Horde: Excavation Site).
 local function BagBonus(d)
     if d.to > UnitLevel("player") and ns.HasSleepingBag() then return S.bagBonus end
-    return ((d.start + d.to) / 2 >= S.bagLevel) and S.bagBonus or 0
+    return (ns.bagIndex and d.index >= ns.bagIndex) and S.bagBonus or 0
 end
 
 -- Kill XP multiplier for a leg: food + sleeping bag.

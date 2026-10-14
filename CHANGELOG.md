@@ -1,5 +1,12 @@
 # DLC – Dungeon Leveling Companion Changelog
 
+## Unreleased
+
+- City of Dalaran, The Drowned City, Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold and Shaper's Terrace are marked as live at the November 4 launch (the old "if not live" fallback notes are gone).
+- Cozy Sleeping Bag chain on the Horde route: note picked up in the Barrens (WC prep), turned in in Westfall (DM trip), Stonetalon before RFK, Loch Modan dam + Thoradin's Wall before the Excavation Site.
+- The sleeping bag XP bonus in estimates starts at the dungeon whose prereqs finish the chain (Alliance: Ruins of Lordaeron, Horde: Excavation Site) instead of a fixed level 20.
+- City of Dalaran quests from Wowhead's guide, 4 per faction. Horde: the Dalaran Sewer Key chain from Tarren Mill is tracked as prep before the first run.
+
 ## 1.2.0
 
 - Cozy Sleeping Bag chain tracked as prereq steps along the route: pick up the note in Westfall (Deadmines prep), Barrens tower + Stonetalon camp on the way to Wailing Caverns, Loch Modan dam + Thoradin's Wall on the walk to Ruins of Lordaeron. Its 15,265 quest XP counts toward when to swap dungeons.

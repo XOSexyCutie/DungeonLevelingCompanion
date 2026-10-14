@@ -86,18 +86,19 @@ local ALLIANCE = {
       match = { "scarlet monastery" }, subzones = { "graveyard", "forlorn cloister", "chamber of atonement", "honor's tomb" },
       note = "Fast runs - watch the 5 instances/hour cap.",
       questList = { "Vorrel's Revenge (Vorrel Sengutz, inside)" } },
-    { key = "dal", name = "City of Dalaran", start = 31, to = 33, off = 1, elites = 200, quests = 5, min = 70, tier = "Experienced",
+    { key = "dal", name = "City of Dalaran", start = 31, to = 33, off = 1, elites = 200, quests = 4, min = 70, tier = "Experienced",
       match = { "dalaran" },
-      note = "In beta. If not live: SM Graveyard/Library until 33.",
+      note = "New Forever dungeon - in the beta now and live at the Nov 4 launch. Alterac Mountains: the Image of Archmage Modera outside lets you in. Most mobs are Arcane immune.",
       secret = { boss = "Lyn the Ignored", how = "Use the Tome of Dalaran on the summoning circle in the small room past Atrexis the Grave Knight (straight ahead, not up the ramp)." },
-      questList = { "5 quests (names TBD)" } },
+      questList = { "Power Overwhelming (High Sorcerer Andromath, SW Mage Quarter) [92489]", "A Green Sample (Shylamiir, SW The Park) [92456]",
+                    "Heart of Disruption (Image of Archmage Modera, outside the dungeon) [92458]", "Starving Arcane (outside the dungeon entrance) [92457]" } },
     { key = "smlib", name = "SM Library", start = 33, to = 35, off = 1, elites = 90, quests = 1, min = 30, tier = "Experienced",
       match = { "scarlet monastery" }, subzones = { "library", "huntsman's cloister", "gallery of treasures", "athenaeum" },
       note = "The Scarlet Key (for Armory/Cathedral) drops here.",
       questList = { "Mythology of the Titans (Librarian Mae Paledust, IF Hall of Explorers)" } },
     { key = "drowned", name = "The Drowned City", start = 35, to = 37, off = 1, elites = 150, quests = 5, min = 50, tier = "Experienced",
       match = { "drowned city" },
-      note = "Reportedly opens ~Dec 9. If not live: SM Library/Armory until 37.",
+      note = "New Forever dungeon - live at the Nov 4 launch.",
       questList = { "Quests TBD" } },
     { key = "smarm", name = "SM Armory", start = 37, to = 38, off = 1, elites = 80, quests = 0, min = 30, tier = "Experienced",
       match = { "scarlet monastery" }, subzones = { "armory", "training grounds", "footman's armory", "crusader's armory", "hall of champions" },
@@ -122,7 +123,7 @@ local ALLIANCE = {
                     "The Platinum Discs (inside, after Archaedas)" } },
     { key = "krol", name = "Krol'dok Stronghold", start = 42, to = 44, off = 1, elites = 160, quests = 5, min = 55, tier = "Experienced",
       match = { "krol'dok", "kroldok" },
-      note = "Reportedly opens ~Dec 9. If not live: Uldaman until 44.",
+      note = "New Forever dungeon - live at the Nov 4 launch.",
       questList = { "Quests TBD" } },
     { key = "zf", name = "Zul'Farrak", start = 44, to = 46, off = 1, elites = 180, quests = 7, min = 60, tier = "Master",
       match = { "zul'farrak", "zulfarrak" },
@@ -140,7 +141,7 @@ local ALLIANCE = {
                     "Seed of Life (Zaetar's Spirit, inside)", "The Pariah's Instructions (Centaur Pariah, Desolace)" } },
     { key = "alcaz", name = "Alcaz Prison", start = 49, to = 51, off = 1, elites = 180, quests = 5, min = 60, tier = "Master",
       match = { "alcaz" },
-      note = "Reportedly opens ~Dec 9. If not live: Maraudon/Sunken Temple until 51.",
+      note = "New Forever dungeon - live at the Nov 4 launch. Alcaz Island, off Dustwallow Marsh.",
       questList = { "Quests TBD" } },
     { key = "st", name = "Sunken Temple", start = 51, to = 53, off = 1, elites = 170, quests = 6, min = 75, tier = "Master",
       match = { "sunken temple", "atal'hakkar" },
@@ -159,7 +160,7 @@ local ALLIANCE = {
                     "Attunement to the Core (Lothos Riftwaker, Blackrock Mtn)" } },
     { key = "blackmaw", name = "Blackmaw Hold", start = 56, to = 57, off = 1, elites = 200, quests = 5, min = 70, tier = "Master",
       match = { "blackmaw" },
-      note = "Not in beta yet. If not live: BRD / DM East until 57.",
+      note = "New Forever dungeon - live at the Nov 4 launch (not in the beta). Northern Azshara.",
       questList = { "Quests TBD" } },
     { key = "lbrs", name = "Lower Blackrock Spire", start = 57, to = 58, off = 1, elites = 200, quests = 7, min = 75, tier = "Master",
       match = { "blackrock spire" },
@@ -173,7 +174,7 @@ local ALLIANCE = {
       questList = { "Lethtendris's Web (Latronicus Moonspear, Feathermoon)", "Pusillin and the Elder Azj'Tordin (Azj'Tordin, Feralas)" } },
     { key = "shaper", name = "Shaper's Terrace", start = 58, to = 60, off = 1, elites = 200, quests = 5, min = 70, tier = "Master",
       match = { "shaper" },
-      note = "Not in beta yet. If not live: LBRS / DM East / Strat / Scholo to 60.",
+      note = "New Forever dungeon - live at the Nov 4 launch (not in the beta). Un'Goro Crater.",
       questList = { "Quests TBD" } },
     { key = "ubrs", name = "Upper Blackrock Spire", start = 60, to = 60, off = 0, elites = 150, quests = 0, min = 75, tier = "Master",
       match = { "blackrock spire" }, subzones = { "hordemar city", "dragonspire hall", "hall of blackhand", "rookery", "the beast's lair", "blackrock stadium" },
@@ -264,6 +265,30 @@ local BAG_ROL = {
     { q = "This Must Be The Place", xp = 2350, bag = true, min = 2,
       from = "Hastily Rolled-Up Satchel, just below the Messenger Bag",
       what = "Click the satchel: Cozy Sleeping Bag + 5 Student Fodder. Lie on it 3 min for Well-Rested (+3% XP)." },
+}
+
+-- Cozy Sleeping Bag (Horde): the first two stops are swapped - the note is picked up in the
+-- Barrens and turned in in Westfall. Pickup on the way to WC, Westfall on the DM trip,
+-- Stonetalon before RFK, Loch Modan dam + Thoradin's Wall around the Wetlands for the
+-- Excavation Site. Guides suggest ~30 for the dam: Alliance guards, go as a group.
+local BAG_HORDE_PICKUP = {
+    { q = "...and that note you found", pickup = true, bag = true, min = 10, unlocks = BAG_QUESTS,
+      from = "Burned-out Remains in the burned tower south of Camp Taurajo, The Barrens (46.1, 74.3)",
+      what = "Cozy Sleeping Bag chain: pick up the note while you're in the Barrens. You turn it in in Westfall on the Deadmines trip." },
+}
+local BAG_HORDE_WESTFALL = {
+    { q = "...and that note you found", xp = 3150, bag = true, min = 10, unlocks = BAG_QUESTS,
+      from = "Wrecked cart, Alexston Farmstead, Westfall (37.1, 50.1)",
+      what = "Turn the note in at the remains by the wrecked cart while you're in Westfall for DM. Starts Stepping Stones (Stonetalon, before RFK)." },
+}
+local BAG_HORDE_WETLANDS = {
+    { q = "Wet Job", xp = 3150, bag = true, min = 25, unlocks = After("Wet Job"),
+      from = "Carved figurine on the Stonewrought Dam, Loch Modan (49.4, 12.9)",
+      what = "From the Wetlands go through Dun Algaz to the dam, walk to the middle and drop onto the ledge with the eagle figurine. Alliance guards on the dam - go as a group." },
+    { q = "Eagle's Fist", xp = 3150, bag = true, min = 20, unlocks = After("Eagle's Fist"),
+      from = "Messenger Bag on Thoradin's Wall, Hillsbrad side (87.3, 49.6)",
+      what = "On the way back to Arathi/Hillsbrad: climb onto the wall from the leaning cart, follow it to the small platform and click the Messenger Bag." },
+    BAG_ROL[3],
 }
 
 local PREP_ALLIANCE = {
@@ -372,7 +397,7 @@ local HORDE = {
       questList = { "Light's Justice (Morbin Lightbane, Undercity Royal Quarter)", "The New Plague (Theodore Griffs, Undercity Apothecarium)",
                     "The Wrath of Rath'mael (Deathguard Kristof, Tirisfal 65, 60)", "A Frightened Request (Tabetha Heartweaver, The Sepulcher)",
                     "Unending Torment (Abominable Head drop, inside)", "Crest of Lordaeron (found inside)" } },
-    { "wc", 18, 20, quests = 7, note = "Deviate hides for skinning/LW.",
+    { "wc", 18, 20, quests = 7, note = "Deviate hides for skinning/LW. Sleeping bag: grab the note in the burned tower south of Camp Taurajo.",
       questList = { "Serpentbloom (Apothecary Zamah, Thunder Bluff)", "Leaders of the Fang (Nara Wildmane, Thunder Bluff)",
                     "Deviate Hides (Nalpak, above WC entrance) [1486]", "Deviate Eradication (Ebru, above WC entrance) [1487]",
                     "Trouble at the Docks (Crane Operator Bigglefuzz, Ratchet) [959]", "Smart Drinks (Mebok Mizzyrix, Ratchet) [1491]",
@@ -384,12 +409,12 @@ local HORDE = {
       questList = { "The Essence of Aku'Mai (Je'neu Sancrea, Zoram'gar Outpost)", "Amongst the Ruins (Je'neu Sancrea, Zoram'gar Outpost)",
                     "Blackfathom Villainy (Argent Guard Thaelrid, inside)", "Baron Aquanis (Strange Water Globe drop)",
                     "Allegiance to the Old Gods (Damp Note drop outside - rare)" } },
-    { "dm", 24, 24, quests = 0, note = "One run for Novice Spelunker - no Horde quests. Long trip to Westfall.", questList = {} },
-    { "rfk", 24, 26, quests = 5, note = "Combine with a Barrens/Ratchet trip. Grab the Blueleaf Tubers items next to Mebok.",
+    { "dm", 24, 24, quests = 0, note = "One run for Novice Spelunker - no Horde quests. Long trip to Westfall: turn in the sleeping bag note at Alexston Farmstead.", questList = {} },
+    { "rfk", 24, 26, quests = 5, note = "Combine with a Barrens/Ratchet trip. Grab the Blueleaf Tubers items next to Mebok. Sleeping bag: Stonetalon camp past Sun Rock Retreat first.",
       questList = { "A Vengeful Fate (Auld Stonespire, Thunder Bluff)", "Going, Going, Guano! (Master Apothecary Faranell, Undercity)",
                     "Blueleaf Tubers (Mebok Mizzyrix, Ratchet)", "Willix the Importer (escort, inside)",
                     "An Unholy Alliance (Small Scroll drop from Charlga Razorflank)" } },
-    { "exc", 26, 28, quests = 3, note = "Thicket raptors = skinning.",
+    { "exc", 26, 28, quests = 3, note = "Thicket raptors = skinning. Sleeping bag: Loch Modan dam (through Dun Algaz) + Thoradin's Wall finish it - Alliance guards on the dam.",
       questList = { "Changing Tastes (Borstan, Orgrimmar The Drag)", "Open the Maw (Deathstalker Agent, Wetlands 51, 59)",
                     "Elder Knowledge (Titan Relic drop from Relic Guardian)" } },
     { "gnomer", 28, 30, quests = 5, note = "Long. Someone needs the Workshop Key for the back door.",
@@ -397,10 +422,13 @@ local HORDE = {
                     "Gnomer-gooooone! (Scooty, Booty Bay)", "A Fine Mess (escort Kernobee, inside)", "Grime-Encrusted Ring (drop inside)" } },
     { "smgy", 30, 31, quests = 2, note = "Fast runs - watch the 5 instances/hour cap.",
       questList = { "Vorrel's Revenge (Vorrel Sengutz, inside)", "Hearts of Zeal (Master Apothecary Faranell, Undercity)" } },
-    { "dal", 31, 33, quests = 5, note = "In beta. If not live: SM Graveyard/Library until 33.", questList = { "5 quests (names TBD)" } },
+    { "dal", 31, 33, quests = 4, note = "New Forever dungeon - in the beta now and live at the Nov 4 launch. Needs the Dalaran Sewer Key chain from Tarren Mill (only one player needs the key). Swim over from Silverpine. Most mobs are Arcane immune.",
+      questList = { "The Grave Knight (Melisara, Tarren Mill) [96986]", "Source of Power (Doctor Martin Felben, Undercity Apothecarium) [96988]",
+                    "Opportunistic Education (Rexxie Copperclutch, at the dungeon entrance) [96987]",
+                    "Heart of Disruption (Image of Archmage Modera, outside Dalaran - end of the Sewer Key chain) [96984]" } },
     { "smlib", 33, 35, quests = 2, note = "The Scarlet Key (for Armory/Cathedral) drops here.",
       questList = { "Compendium of the Fallen (Sage Truthseeker, Thunder Bluff - not Undead)", "Test of Lore (Parqual Fintallas, Undercity)" } },
-    { "drowned", 35, 37, quests = 5, note = "Reportedly opens ~Dec 9. If not live: SM Library/Armory until 37.", questList = { "Quests TBD" } },
+    { "drowned", 35, 37, quests = 5, note = "New Forever dungeon - live at the Nov 4 launch.", questList = { "Quests TBD" } },
     { "smarm", 37, 38, quests = 0, note = "Needs the Scarlet Key (Library drop).", questList = {} },
     { "smcath", 38, 39, quests = 1, note = "Needs the Scarlet Key.",
       questList = { "Into The Scarlet Monastery (Varimathras, Undercity)" } },
@@ -412,7 +440,7 @@ local HORDE = {
       questList = { "Reclaimed Treasures (Patrick Garrett, Undercity)", "Uldaman Reagent Run (Jarkal Mossmeld, Kargath)",
                     "Power Stones (Rigglefuzz, Badlands)", "Solution to Doom (Theldurin the Lost, Badlands)",
                     "The Shattered Necklace (drop outside Uldaman)", "The Platinum Discs (inside, after Archaedas)" } },
-    { "krol", 42, 44, quests = 5, note = "Reportedly opens ~Dec 9. If not live: Uldaman until 44.", questList = { "Quests TBD" } },
+    { "krol", 42, 44, quests = 5, note = "New Forever dungeon - live at the Nov 4 launch.", questList = { "Quests TBD" } },
     { "zf", 44, 46, quests = 7, note = "Gahz'rilla needs the Mallet of Zul'Farrak (Hinterlands). Basilisks = skinning.",
       questList = { "The Spider God (Master Gadrin, Sen'jin Village)", "Divino-matic Rod (Chief Engineer Bilgewhizzle, Gadgetzan)",
                     "Scarab Shells (Tran'rek, Gadgetzan)", "Troll Temper (Trenton Lighthammer, Gadgetzan)",
@@ -423,7 +451,7 @@ local HORDE = {
                     "Corruption of Earth and Seed (Selendra, south of Shadowprey)", "Twisted Evils (Willow, Desolace)",
                     "Legends of Maraudon (Cavindra, outside)", "The Scepter of Celebras (Celebras the Redeemed, inside)",
                     "Seed of Life (Zaetar's Spirit, inside)", "The Pariah's Instructions (Centaur Pariah, Desolace)" } },
-    { "alcaz", 49, 51, quests = 5, note = "Reportedly opens ~Dec 9. If not live: Maraudon/Sunken Temple until 51.", questList = { "Quests TBD" } },
+    { "alcaz", 49, 51, quests = 5, note = "New Forever dungeon - live at the Nov 4 launch. Alcaz Island, off Dustwallow Marsh.", questList = { "Quests TBD" } },
     { "st", 51, 53, quests = 7, note = "Avatar of Hakkar needs Yeh'kinya's Scroll.",
       questList = { "The Temple of Atal'Hakkar (Fel'zerul, Stonard)", "Zapper Fuel (Liv Rizzlefix, Ratchet)",
                     "Into the Depths (Marvon Rivetseeker, Tanaris)", "Secret of the Circle (Marvon Rivetseeker, Tanaris)",
@@ -436,7 +464,7 @@ local HORDE = {
                     "The Last Element (Shadowmage Vivian Lagrave, Kargath)", "Ribbly Screwspigot (Yuka Screwspigot, Flame Crest)",
                     "The Heart of the Mountain (Maxwort Uberglint, Flame Crest)", "The Love Potion (Mistress Nagmara, inside)",
                     "Dark Iron Legacy (Franclorn Forgewright, Blackrock Mtn - visible while dead)", "Attunement to the Core (Lothos Riftwaker, Blackrock Mtn)" } },
-    { "blackmaw", 56, 57, quests = 5, note = "Not in beta yet. If not live: BRD / DM East until 57.", questList = { "Quests TBD" } },
+    { "blackmaw", 56, 57, quests = 5, note = "New Forever dungeon - live at the Nov 4 launch (not in the beta). Northern Azshara.", questList = { "Quests TBD" } },
     { "lbrs", 57, 58, quests = 9, note = "Seal of Ascension (UBRS key) starts here.",
       questList = { "The Pack Mistress (Galamav the Marksman, Kargath)", "Operative Bijou (Lexlort, Kargath)",
                     "Warlord's Command (Warlord Goretooth, Kargath)", "Bijou's Belongings (Bijou, inside)",
@@ -444,12 +472,29 @@ local HORDE = {
                     "Mother's Milk (Ragged John, Flame Crest)", "Urok Doomhowl (Warosh, inside)", "Seal of Ascension (drop inside)" } },
     { "dme", 58, 58, quests = 2, note = "One run for the achievement while in Feralas.",
       questList = { "Lethtendris's Web (Talo Thornhoof, Camp Mojache)", "Pusillin and the Elder Azj'Tordin (Azj'Tordin, Feralas)" } },
-    { "shaper", 58, 60, quests = 5, note = "Not in beta yet. If not live: LBRS / DM East / Strat / Scholo to 60.", questList = { "Quests TBD" } },
+    { "shaper", 58, 60, quests = 5, note = "New Forever dungeon - live at the Nov 4 launch (not in the beta). Un'Goro Crater.", questList = { "Quests TBD" } },
     { "ubrs", 60, 60 }, { "dmw", 60, 60 }, { "dmn", 60, 60 }, { "stratlive", 60, 60 }, { "stratud", 60, 60 }, { "scholo", 60, 60 },
 }
 
+-- Dalaran Sewer Key (Horde): Tarren Mill chain that ends with Heart of Disruption and the key.
+-- Only one player in the group needs the key to open the gate. Order and IDs from Wowhead's
+-- City of Dalaran guide; quest levels are estimates.
+local DALARAN_KEY_HORDE = {
+    { q = "Prison Break In", id = 544, unlocks = { 92434, 96984 }, lvl = 24, min = 25, from = "Magus Wordeen Voidglare, Tarren Mill",
+      what = "Find the traitors outside Dalaran and recover their artifacts. Take Key to the City from him too." },
+    { q = "Key to the City", id = 93680, unlocks = { 92434, 96984 }, lvl = 24, min = 20, from = "Magus Wordeen Voidglare, Tarren Mill",
+      what = "Get the Grimy Key for Magus Voidglare." },
+    { q = "Dalaran Patrols", id = 545, unlocks = { 92434, 96984 }, lvl = 24, min = 25, from = "Magus Wordeen Voidglare, Tarren Mill",
+      what = "Kill 6 Dalaran Summoners and 12 Elemental Slaves outside Dalaran." },
+    { q = "Blood in the Streets", id = 92434, unlocks = { 96984 }, lvl = 24, min = 15, from = "Magus Wordeen Voidglare, Tarren Mill",
+      what = "Hand it in to the Image of Archmage Modera outside Dalaran. She gives Heart of Disruption and the Dalaran Sewer Key." },
+}
+local DALARAN_HORDE = {}
+for _, s in ipairs(DALARAN_KEY_HORDE) do table.insert(DALARAN_HORDE, s) end
+for _, s in ipairs(DALARAN_TOME) do table.insert(DALARAN_HORDE, s) end
+
 local PREP_HORDE = {
-    dal = DALARAN_TOME,
+    dal = DALARAN_HORDE,
     rfc = {
         { q = "Hidden Enemies", part = 1, parts = 2, lvl = 12, min = 15, from = "Thrall, Orgrimmar Valley of Wisdom",
           what = "First part of Thrall's Hidden Enemies chain (Orgrimmar)." },
@@ -468,10 +513,14 @@ local PREP_HORDE = {
           what = "Travel to Hamuul Runetotem, Thunder Bluff." },
         { q = "Nara Wildmane", unlocks = { "Leaders of the Fang" }, lvl = 17, min = 5, from = "Hamuul Runetotem, Thunder Bluff",
           what = "Talk to Nara Wildmane (Elder Rise). Unlocks Leaders of the Fang." },
+        BAG_HORDE_PICKUP[1],
     },
+    dm = BAG_HORDE_WESTFALL,
+    rfk = { BAG_BARRENS[2], BAG_BARRENS[3], BAG_BARRENS[4] },
     exc = {
         { q = "Dragonmaw Rumors", unlocks = { "Open the Maw" }, lvl = 26, min = 25, from = "Zaruk, Hammerfall (Arathi 74.4, 35.6)",
           what = "Leads to the Deathstalker Agent in the Wetlands (51.4, 59.2). Unlocks Open the Maw." },
+        BAG_HORDE_WETLANDS[1], BAG_HORDE_WETLANDS[2], BAG_HORDE_WETLANDS[3],
     },
     smgy = {
         { q = "Going, Going, Guano!", unlocks = { "Hearts of Zeal" }, lvl = 33, min = 10, from = "Master Apothecary Faranell, Undercity",
@@ -555,10 +604,15 @@ function ns.BuildRoute(faction)
     end
     for k in pairs(ns.ROUTE) do ns.ROUTE[k] = nil end
     for k in pairs(ns.BY_KEY) do ns.BY_KEY[k] = nil end
+    -- The sleeping bag chain ends in the prep of this route index; legs from here on get its bonus.
+    ns.bagIndex = nil
     for i, d in ipairs(route) do
         d.index = i
         ns.ROUTE[i] = d
         ns.BY_KEY[d.key] = d
+        for _, step in ipairs(d.prep) do
+            if step == BAG_ROL[3] and not ns.bagIndex then ns.bagIndex = i end
+        end
     end
     ns.faction = (faction == "Horde") and "Horde" or "Alliance"
     if ns.PrepareQuests then ns.PrepareQuests() end
