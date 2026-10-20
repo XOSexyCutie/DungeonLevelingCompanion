@@ -1,11 +1,14 @@
 # DLC – Dungeon Leveling Companion Changelog
 
-## Unreleased
+## 1.3.0
 
 - City of Dalaran, The Drowned City, Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold and Shaper's Terrace are marked as live at the November 4 launch (the old "if not live" fallback notes are gone).
 - Cozy Sleeping Bag chain on the Horde route: note picked up in the Barrens (WC prep), turned in in Westfall (DM trip), Stonetalon before RFK, Loch Modan dam + Thoradin's Wall before the Excavation Site.
 - The sleeping bag XP bonus in estimates starts at the dungeon whose prereqs finish the chain (Alliance: Ruins of Lordaeron, Horde: Excavation Site) instead of a fixed level 20.
 - City of Dalaran quests from Wowhead's guide, 4 per faction. Horde: the Dalaran Sewer Key chain from Tarren Mill is tracked as prep before the first run.
+- City of Dalaran (Alliance): An Alarming Request (Emissary Jacques, Southshore, level 30) is tracked as prep - it leads to Heart of Disruption and the Dalaran Sewer Key.
+- Shaper's Terrace: gathering Un'Goro power crystals (used at consoles inside) is a prep step for both factions.
+- Blackmaw Hold estimates assume a BRD-sized run (elites, quests and minutes) until real data is in.
 
 ## 1.2.0
 
