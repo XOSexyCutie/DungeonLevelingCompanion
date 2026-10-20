@@ -88,10 +88,10 @@ local ALLIANCE = {
       questList = { "Vorrel's Revenge (Vorrel Sengutz, inside)" } },
     { key = "dal", name = "City of Dalaran", start = 31, to = 33, off = 1, elites = 200, quests = 4, min = 70, tier = "Experienced",
       match = { "dalaran" },
-      note = "New Forever dungeon - in the beta now and live at the Nov 4 launch. Alterac Mountains: the Image of Archmage Modera outside lets you in. Most mobs are Arcane immune.",
+      note = "New Forever dungeon - in the beta now and live at the Nov 4 launch. Needs An Alarming Request (Southshore, level 30) for the Dalaran Sewer Key (only one player needs the key). Most mobs are Arcane immune.",
       secret = { boss = "Lyn the Ignored", how = "Use the Tome of Dalaran on the summoning circle in the small room past Atrexis the Grave Knight (straight ahead, not up the ramp)." },
       questList = { "Power Overwhelming (High Sorcerer Andromath, SW Mage Quarter) [92489]", "A Green Sample (Shylamiir, SW The Park) [92456]",
-                    "Heart of Disruption (Image of Archmage Modera, outside the dungeon) [92458]", "Starving Arcane (outside the dungeon entrance) [92457]" } },
+                    "Heart of Disruption (Image of Archmage Modera, Silverpine shore - after An Alarming Request) [92458]", "Starving Arcane (outside the dungeon entrance) [92457]" } },
     { key = "smlib", name = "SM Library", start = 33, to = 35, off = 1, elites = 90, quests = 1, min = 30, tier = "Experienced",
       match = { "scarlet monastery" }, subzones = { "library", "huntsman's cloister", "gallery of treasures", "athenaeum" },
       note = "The Scarlet Key (for Armory/Cathedral) drops here.",
@@ -158,9 +158,9 @@ local ALLIANCE = {
                     "The Heart of the Mountain (Maxwort Uberglint, Flame Crest)", "The Love Potion (Mistress Nagmara, inside)",
                     "Kharan Mighthammer (King Magni, IF)", "The Fate of the Kingdom (King Magni, IF)",
                     "Attunement to the Core (Lothos Riftwaker, Blackrock Mtn)" } },
-    { key = "blackmaw", name = "Blackmaw Hold", start = 56, to = 57, off = 1, elites = 200, quests = 5, min = 70, tier = "Master",
+    { key = "blackmaw", name = "Blackmaw Hold", start = 56, to = 57, off = 1, elites = 350, quests = 11, min = 120, tier = "Master",
       match = { "blackmaw" },
-      note = "New Forever dungeon - live at the Nov 4 launch (not in the beta). Northern Azshara.",
+      note = "New Forever dungeon - live at the Nov 4 launch (not in the beta). Azshara. Big furbolg city with several routes and bosses - estimates assume a BRD-sized run.",
       questList = { "Quests TBD" } },
     { key = "lbrs", name = "Lower Blackrock Spire", start = 57, to = 58, off = 1, elites = 200, quests = 7, min = 75, tier = "Master",
       match = { "blackrock spire" },
@@ -174,7 +174,7 @@ local ALLIANCE = {
       questList = { "Lethtendris's Web (Latronicus Moonspear, Feathermoon)", "Pusillin and the Elder Azj'Tordin (Azj'Tordin, Feralas)" } },
     { key = "shaper", name = "Shaper's Terrace", start = 58, to = 60, off = 1, elites = 200, quests = 5, min = 70, tier = "Master",
       match = { "shaper" },
-      note = "New Forever dungeon - live at the Nov 4 launch (not in the beta). Un'Goro Crater.",
+      note = "New Forever dungeon - live at the Nov 4 launch (not in the beta). Northern hills of Un'Goro Crater. Bring Un'Goro power crystals for the consoles inside.",
       questList = { "Quests TBD" } },
     { key = "ubrs", name = "Upper Blackrock Spire", start = 60, to = 60, off = 0, elites = 150, quests = 0, min = 75, tier = "Master",
       match = { "blackrock spire" }, subzones = { "hordemar city", "dragonspire hall", "hall of blackhand", "rookery", "the beast's lair", "blackrock stadium" },
@@ -221,6 +221,25 @@ local DALARAN_TOME = {
       what = "Use the Black Tome at the blue crystal next to Archmage Ataeric in the Ambermill town hall. "
           .. "In Dalaran: past Atrexis the Grave Knight, skip the ramp to the Arcane Anomaly, clear the small room "
           .. "straight ahead and use the tome on the summoning circle to summon Lyn the Ignored." },
+}
+
+-- Dalaran Sewer Key (Alliance): An Alarming Request leads to Heart of Disruption, which gives the
+-- key. Only one player in the group needs it. IDs and coordinates from Wowhead (Forever 1.60.1).
+local DALARAN_ALLIANCE = {
+    { q = "An Alarming Request", id = 92432, unlocks = { 92458 }, xp = 660, min = 20,
+      from = "Emissary Jacques, Southshore (48.3, 60.1) - requires level 30",
+      what = "Report to the Image of Archmage Modera on the Silverpine shore of Lordamere Lake (68.4, 45.2). "
+          .. "She gives Heart of Disruption and the Dalaran Sewer Key." },
+}
+for _, s in ipairs(DALARAN_TOME) do table.insert(DALARAN_ALLIANCE, s) end
+
+-- Shaper's Terrace (both factions): power crystals from Un'Goro are used at consoles inside.
+-- Blizzard's preview doesn't say which colors or how many, so any crystal counts the step as done.
+local UNGORO_CRYSTALS = {
+    { q = "Un'Goro Power Crystals", item = 11184, items = { 11185, 11186, 11188 }, min = 20,
+      from = "Crystal clusters around Un'Goro Crater",
+      what = "Gather Blue, Green, Red and Yellow Power Crystals while questing in Un'Goro - "
+          .. "you use them at consoles inside the dungeon. Exact amounts aren't known yet; bring a few of each." },
 }
 
 -- Cozy Sleeping Bag (Alliance): picked up in Westfall during the Defias chain, Barrens and
@@ -292,7 +311,8 @@ local BAG_HORDE_WETLANDS = {
 }
 
 local PREP_ALLIANCE = {
-    dal = DALARAN_TOME,
+    dal = DALARAN_ALLIANCE,
+    shaper = UNGORO_CRYSTALS,
     hot = {
         { q = "Nip 'Em in the Bud", unlocks = { "Old Ironforge Incursion" }, lvl = 12, min = 25, from = "Earthseer Farsen, Dun Morogh (64.8, 58.5)",
           what = "Kill 10 Dark Iron Spies (~76, 60). One drops the Dark Iron Map - use it and return to Farsen." },
@@ -495,6 +515,7 @@ for _, s in ipairs(DALARAN_TOME) do table.insert(DALARAN_HORDE, s) end
 
 local PREP_HORDE = {
     dal = DALARAN_HORDE,
+    shaper = UNGORO_CRYSTALS,
     rfc = {
         { q = "Hidden Enemies", part = 1, parts = 2, lvl = 12, min = 15, from = "Thrall, Orgrimmar Valley of Wisdom",
           what = "First part of Thrall's Hidden Enemies chain (Orgrimmar)." },

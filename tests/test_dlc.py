@@ -519,10 +519,11 @@ print("\nFAILURES:", fails)
 
 # --- 16. Dalaran secret boss: Black Tome (SFK) -> Tome of Dalaran (item steps) ---
 run('state.items = {}; GetItemCount = function(id) return state.items[id] or 0 end; SlashCmdList.DUNGEONLEVELINGCOMPANION("reset confirm")'); take("chat")
-def tome(): return [(s.step.q, s.status) for s in ns.PrepSteps(ns.BY_KEY.dal).values()]
-check("Dalaran prep lists both tome steps, to do", tome() == [("Black Tome", "todo"), ("Tome of Dalaran", "todo")], tome())
+def dal_prep(): return [(s.step.q, s.status) for s in ns.PrepSteps(ns.BY_KEY.dal).values()]
+def tome(): return [(q, st) for q, st in dal_prep() if q != "An Alarming Request"]
+check("Alliance Dalaran prep = Sewer Key quest, then both tome steps", dal_prep() == [("An Alarming Request", "todo"), ("Black Tome", "todo"), ("Tome of Dalaran", "todo")], dal_prep())
 xp_dal, min_dal = ns.PrepLeft(ns.BY_KEY.dal)
-check("tome steps are optional (no XP/time in the swap estimate)", xp_dal == 0 and min_dal == 0, (xp_dal, min_dal))
+check("tome steps are optional (only the key quest counts: 660 XP, 20m)", xp_dal == 660 and min_dal == 20, (xp_dal, min_dal))
 run('state.level = 21; state.xp = 0'); lines = panel()
 check("SFK panel reminds to loot the Black Tome", any("Loot: Black Tome" in l and "City of Dalaran" in l for l in lines), [l for l in lines if "Loot" in l])
 run('state.items[276561] = 1'); lines = panel()
@@ -531,6 +532,12 @@ run('state.items[276561] = 0; state.items[275989] = 1')
 check("Tome of Dalaran in bags -> both done", tome() == [("Black Tome", "done"), ("Tome of Dalaran", "done")], tome())
 run('state.items[275989] = 0')
 check("tome used up -> still done (remembered)", tome() == [("Black Tome", "done"), ("Tome of Dalaran", "done")], tome())
+
+# Shaper's Terrace: any Un'Goro power crystal counts the prep step as done.
+def crystals(): return [(s.step.q, s.status) for s in ns.PrepSteps(ns.BY_KEY.shaper).values()]
+check("Shaper's Terrace prep = power crystals, to do", crystals() == [("Un'Goro Power Crystals", "todo")], crystals())
+run('state.items[11186] = 3')
+check("a Red Power Crystal -> crystal step done", crystals() == [("Un'Goro Power Crystals", "done")], crystals())
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
 
