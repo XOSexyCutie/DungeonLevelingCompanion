@@ -1,5 +1,15 @@
 # DLC – Dungeon Leveling Companion Changelog
 
+## 1.5.0
+
+Reworked for alts leveling with pugs instead of a premade group running one dungeon over and over.
+
+- New panel: **Now** (the first dungeon open at your level that still has quests or prereqs), **Next** (the next dungeon's min level, levels and XP to go, and its prequests and dungeon quests to pick up on the way) and **Also open** (other dungeons in your level range).
+- Dungeon level ranges from Wowhead's WoW Forever dungeon chart. Dungeons opening at the same level (e.g. SM Graveyard and City of Dalaran at 28) are all shown under Next.
+- `/dlc route` lists every dungeon by min level.
+- Removed the runs-left, XP-per-run, calibration and tent-per-run estimates, along with `/dlc xp` and `/dlc set calib`. The old measured XP data is cleared on login.
+- Loot reminders (e.g. the Black Tome in SFK) also show for the dungeons coming up next.
+
 ## 1.4.0
 
 - Dungeon quests from Wowhead's live Forever data (1.60.1): The Drowned City (5 per faction), Krol'dok Stronghold (8 Alliance, 5 Horde), Alcaz Prison (Alliance: The Dragon's Journal) and Blackmaw Hold (1 per faction), with quest IDs.

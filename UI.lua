@@ -26,11 +26,11 @@ end
 
 -- Your unfinished quests for d, each with the party members (group sync) who need it too,
 -- then the quests you've finished that someone in the party still needs.
-local function AddQuestLines(lines, d)
+local function AddQuestLines(lines, d, title)
     local quests = ns.DungeonQuests and ns.DungeonQuests(d) or {}
     local needs = ns.PartyNeeds and ns.PartyNeeds(d) or {}
     if #quests > 0 then
-        table.insert(lines, ("Quests (%d left):"):format(#quests))
+        table.insert(lines, ("%s (%d left):"):format(title or "Quests", #quests))
         for i, q in ipairs(quests) do
             if i > MAX_QUEST_LINES then
                 table.insert(lines, ("  %s+%d more - /dlc quests|r"):format(GREY, #quests - MAX_QUEST_LINES))
@@ -72,8 +72,9 @@ local function AddPrepLines(lines, d, title)
     local open = ns.PrepOpen(d)
     if #steps == 0 or #open == 0 then return false end
     local xp, min = ns.PrepLeft(d)
-    table.insert(lines, ("%s%s|r %s%d/%d done (~%dm, ~%dk XP left)|r"):format(
-        YELLOW, title, GREY, #steps - #open, #steps, min, math.floor(xp / 1000 + 0.5)))
+    local k = math.floor(xp / 1000 + 0.5)
+    table.insert(lines, ("%s%s|r %s%d/%d done (~%dm%s)|r"):format(
+        YELLOW, title, GREY, #steps - #open, #steps, min, k > 0 and (", ~" .. k .. "k XP") or ""))
     local shownWhat = false
     for _, s in ipairs(steps) do
         table.insert(lines, StepLine(s))
@@ -99,12 +100,13 @@ local function RunningIn()
     return out
 end
 
--- Secret bosses and items to grab for later dungeons: in the recommended dungeon, or the one
--- you're running now. How to summon a secret boss is only spelled out while you're inside.
-local function AddSecretLines(lines, d)
+-- Secret bosses and items to grab for later dungeons: in the dungeons on the panel (`list`) and the
+-- one you're running now. How to summon a secret boss is only spelled out while you're inside.
+local function AddSecretLines(lines, list)
     local inside = RunningIn()
-    local here = { d }
-    for e in pairs(inside) do if e ~= d then table.insert(here, e) end end
+    local here, seen = {}, {}
+    for _, e in ipairs(list) do if not seen[e] then seen[e] = true table.insert(here, e) end end
+    for e in pairs(inside) do if not seen[e] then seen[e] = true table.insert(here, e) end end
     for _, e in ipairs(here) do
         for _, r in ipairs(ns.LootReminders(e)) do
             table.insert(lines, ("%sLoot: %s|r %s(%s) - for %s|r"):format(YELLOW, r.step.q, GREY, r.step.from or "", r["for"].name))
@@ -124,8 +126,7 @@ local function AddGroupLines(lines, d)
     for _, m in ipairs(members) do
         local where = ""
         local theirs = m.cur and ns.BY_KEY[m.cur]
-        if theirs and theirs ~= d then where = " - " .. theirs.name
-        elseif theirs and m.runsLeft then where = (" - ~%d left"):format(m.runsLeft) end
+        if theirs and theirs ~= d then where = " - " .. theirs.name end
         local food = m.food == false and (RED .. " no XP food|r") or ""
         local prep = (d and m.prep and m.prep[d.key] or 0) > 0
             and (" %s%d prereq%s left|r"):format(YELLOW, m.prep[d.key], m.prep[d.key] == 1 and "" or "s") or ""
@@ -137,48 +138,52 @@ local function BuildText()
     local DB, S = ns.DB, ns.S
     local lines = {}
     local lvl = UnitLevel("player")
-    local d, missed = ns.Recommend()
+    local now, nextD, missed, nextAll = ns.Recommend()
+    local d = now[1] or nextD
 
-    if d then
-        local done = DB.runs[d.key] or 0
+    -- Now: the first dungeon in your level range with something left to do.
+    local cur = now[1]
+    if cur then
         if lvl >= 60 then
-            table.insert(lines, ("%sNext:|r %s %s(Spelunker)|r"):format(YELLOW, d.name, GREY))
-        elseif lvl < d.start then
-            table.insert(lines, ("%sSolo to %d, then:|r %s"):format(YELLOW, d.start, d.name))
+            table.insert(lines, ("%sSpelunker:|r %s%s|r %s(not run yet)|r"):format(YELLOW, WHITE, cur.name, GREY))
         else
-            local left = ns.RunsLeft(d)
-            local perRun, measured = ns.XPPerRun(d)
-            local tent = ns.TentPerRun(d)
-            table.insert(lines, ("%sNow:|r %s%s|r  (%d-%d)"):format(YELLOW, WHITE, d.name, d.start, d.to))
-            table.insert(lines, ("  ~%d more run%s to %d  |  done: %d"):format(left, left == 1 and "" or "s", d.to, done))
-            -- The next dungeon's prereq XP covers the rest of the leg: stop and go do them.
-            local nextD = ns.ROUTE[d.index + 1]
-            if left == 0 and nextD and nextD.start < 60 and ns.PrepLeft(nextD) > 0 then
-                table.insert(lines, ("  %sEnough runs - do the prereqs for %s now, they get you to %d|r"):format(GREEN, nextD.name, d.to))
-            end
-            local runMin, timed = ns.RunMinutes(d)
-            table.insert(lines, ("  %s%d XP/run%s + %d tent, ~%dm/run%s|r"):format(GREY, math.floor(perRun + 0.5), measured and " (measured)" or "",
-                math.floor(tent + 0.5), math.floor(runMin + 0.5), timed and " (measured)" or ""))
-            local prepXP = ns.LegPrepXP(d)
-            if prepXP > 0 then
-                table.insert(lines, ("  %s(counts ~%dk XP from prereq quests)|r"):format(GREY, math.floor(prepXP / 1000 + 0.5)))
-            end
+            table.insert(lines, ("%sNow:|r %s%s|r  %s(%d-%d)|r"):format(YELLOW, WHITE, cur.name, GREY, cur.minLvl, cur.maxLvl))
         end
-        -- Prereqs for this dungeon if you haven't run it yet, then its quests.
-        if S.showPrep and done == 0 then AddPrepLines(lines, d, "Before your first run:") end
-        if S.showQuests then AddQuestLines(lines, d) end
-        if S.showSecrets then AddSecretLines(lines, d) end
-        -- Prereqs for the next dungeon once the swap is close.
-        local nextD = ns.ROUTE[d.index + 1]
-        if S.showPrep and lvl < 60 and lvl >= d.start and nextD and nextD.start < 60
-            and (lvl >= nextD.start - 2 or ns.RunsLeft(d) <= 2) then
-            if not AddPrepLines(lines, nextD, ("Prep for %s:"):format(nextD.name)) then
-                table.insert(lines, ("%sNext: %s at %d - no prereqs needed|r"):format(GREY, nextD.name, nextD.start))
-            end
-        end
-    else
-        table.insert(lines, GREEN .. "Route complete!|r")
+        if S.showPrep then AddPrepLines(lines, cur, "Before you go:") end
+        if S.showQuests then AddQuestLines(lines, cur) end
     end
+
+    -- Next: when the next dungeon opens and what to quest for on the way there.
+    if nextD then
+        local levels = nextD.minLvl - lvl
+        local names = {}
+        for _, e in ipairs(nextAll) do names[#names + 1] = e.name end
+        table.insert(lines, ("%sNext:|r %s%s|r at %d  %s(%d level%s, ~%dk XP)|r"):format(YELLOW, WHITE, table.concat(names, " + "),
+            nextD.minLvl, GREY, levels, levels == 1 and "" or "s", math.floor(ns.XPRemaining(nextD.minLvl) / 1000 + 0.5)))
+        -- Several dungeons open at the same level: label each one's quests.
+        for _, e in ipairs(nextAll) do
+            local tag = #nextAll > 1 and (" - " .. e.name) or ""
+            if S.showPrep then AddPrepLines(lines, e, "Prequests" .. tag .. ":") end
+            if S.showQuests then AddQuestLines(lines, e, "Dungeon quests" .. tag) end
+        end
+    end
+
+    if S.showSecrets then
+        local list = { now[1] }
+        for _, e in ipairs(nextAll) do table.insert(list, e) end
+        AddSecretLines(lines, list)
+    end
+
+    -- Other dungeons you could join a group for right now.
+    if #now > 1 then
+        local names = {}
+        for i = 2, #now do
+            if i > 5 then names[#names + 1] = ("+%d more"):format(#now - 5) break end
+            names[#names + 1] = now[i].name
+        end
+        table.insert(lines, ("%sAlso open:|r %s"):format(YELLOW, table.concat(names, ", ")))
+    end
+    if not d then table.insert(lines, GREEN .. "Route complete!|r") end
 
     if S.showGroup then AddGroupLines(lines, d) end
 
@@ -244,7 +249,7 @@ local function BuildText()
     end
 
     if DB.curRun then
-        table.insert(lines, ("%sIn run: %s - %d trash XP so far%s|r"):format(GREY, DB.curRun.instance, DB.curRun.xp,
+        table.insert(lines, ("%sIn run: %s%s|r"):format(GREY, DB.curRun.instance,
             DB.curRun.leftAt and " (outside - ends in 5 min)" or ""))
     end
     return table.concat(lines, "\n")
@@ -331,14 +336,14 @@ function ns.TogglePanel() ns.SetPanelShown(not (frame and frame:IsShown())) end
 local function ListRoute()
     local DB = ns.DB
     local lvl = UnitLevel("player")
-    Print(("%s route (runs done / est. runs left):"):format(ns.faction or ""))
+    Print(("%s dungeons by min level (runs done):"):format(ns.faction or ""))
     for i, d in ipairs(ns.ROUTE) do
         local done = DB.runs[d.key] or 0
-        local color = ns.IsDone(d) and GREEN or (d.tier and lvl >= d.to and lvl < 60 and RED or WHITE)
+        local open = lvl >= d.minLvl and lvl <= d.maxLvl
+        local color = ns.IsDone(d) and GREEN or (d.tier and lvl > d.maxLvl and lvl < 60 and RED) or (open and YELLOW) or WHITE
         local ach = (DB.achDone and DB.achDone[d.key]) and " |cff55ff55[ach]|r" or ""
-        local left = (lvl >= d.start and lvl < d.to) and ("  ~" .. ns.RunsLeft(d) .. " left") or ""
-        Print(("%2d. %s%s|r [%s] %d-%d  done %d%s%s  %s%s|r"):format(
-            i, color, d.name, d.key, d.start, d.to, done, ach, left, GREY, d.tier or "optional"))
+        Print(("%2d. %s%s|r [%s] %d-%d  done %d%s  %s%s|r"):format(
+            i, color, d.name, d.key, d.minLvl, d.maxLvl, done, ach, GREY, d.tier or "optional"))
     end
 end
 
@@ -369,32 +374,28 @@ local function SetSetting(key, value)
     if map[key] then
         S[map[key]] = (value == "on")
         Print(("%s %s."):format(key, S[map[key]] and "on" or "off"))
-    elseif key == "calib" then
-        S.calibOverride = tonumber(value)
-        Print(S.calibOverride and ("Calibration forced to %.2f."):format(S.calibOverride) or "Calibration back to auto.")
     elseif key == "minlevel" and tonumber(value) then
         ns.GDB.warnMinLevel = tonumber(value)
         Print(("Alerts start at level %d on all your characters."):format(ns.GDB.warnMinLevel))
     else
-        Print("Usage: /dlc set food|tentwarn|tent|bag on|off, /dlc set calib <number|auto>, /dlc set minlevel <level>")
+        Print("Usage: /dlc set food|tentwarn|tent|bag on|off, /dlc set minlevel <level>")
     end
     ns.Refresh()
 end
 
 local HELP = {
     "/dlc - show/hide the window",
-    "/dlc route - full route with runs done",
-    "/dlc quests [dungeon] - quests for the current (or named) dungeon",
+    "/dlc route - every dungeon by min level, with runs done",
+    "/dlc quests [dungeon] - quests for the current/next (or named) dungeon",
     "/dlc prep [dungeon] - prerequisite quest steps for the next (or named) dungeon",
     "/dlc qdone <quest> | qundo <quest> - mark a quest or prereq step finished (or not) by hand",
     "/dlc run <dungeon> - log a run by hand (no XP)",
-    "/dlc xp <dungeon> <amount> - log a run with measured trash XP",
     "/dlc assign <dungeon> - assign the last unrecognised run",
     "/dlc undo - remove the last logged run",
     "/dlc ach - show what was read from the Spelunker achievements",
     "/dlc perf - how much time/memory the addon uses",
     "/dlc buffs - list your buffs and their tooltip text (for food/tent/bag issues)",
-    "/dlc set food|tentwarn|tent|bag on|off  -  /dlc set calib <n|auto>  -  /dlc set minlevel <n>",
+    "/dlc set food|tentwarn|tent|bag on|off  -  /dlc set minlevel <n>",
     "/dlc config - options window (also: right-click the panel or minimap button)",
     "/dlc minimap - show/hide the minimap button",
     "/dlc group - what your party (with DLC) still needs",
@@ -442,12 +443,12 @@ SlashCmdList.DUNGEONLEVELINGCOMPANION = function(input)
     elseif cmd == "route" then
         ListRoute()
     elseif cmd == "quests" then
-        ShowQuests(rest ~= "" and ns.FindDungeon(rest) or (ns.Recommend()))
+        ShowQuests(rest ~= "" and ns.FindDungeon(rest) or ns.Focus())
     elseif cmd == "prep" then
         local d = rest ~= "" and ns.FindDungeon(rest)
         if not d then
-            local cur = ns.Recommend()
-            d = cur and ((DB.runs[cur.key] or 0) == 0 and #ns.PrepOpen(cur) > 0 and cur or ns.ROUTE[cur.index + 1]) or nil
+            local now, nextD = ns.Recommend()
+            d = (now[1] and #ns.PrepOpen(now[1]) > 0) and now[1] or nextD or now[1]
         end
         ShowPrep(d)
     elseif cmd == "qdone" or cmd == "qundo" then
@@ -455,15 +456,11 @@ SlashCmdList.DUNGEONLEVELINGCOMPANION = function(input)
     elseif cmd == "run" then
         local d = ns.FindDungeon(rest)
         if d then ns.RecordRun(d, 0, UnitLevel("player")) else Print("Unknown dungeon: " .. rest) end
-    elseif cmd == "xp" then
-        local name, amount = rest:match("^(.-)%s+(%d+)$")
-        local d = ns.FindDungeon(name)
-        if d and amount then ns.RecordRun(d, tonumber(amount), UnitLevel("player")) else Print("Usage: /dlc xp <dungeon> <amount>") end
     elseif cmd == "assign" then
         local d = ns.FindDungeon(rest)
         if not DB.pending then Print("No unassigned run.")
         elseif not d then Print("Unknown dungeon: " .. rest)
-        else ns.RecordRun(d, DB.pending.xp, DB.pending.level, DB.pending.start) DB.pending = nil end
+        else ns.RecordRun(d, DB.pending.xp, DB.pending.level) DB.pending = nil end
     elseif cmd == "undo" then
         ns.UndoLast()
     elseif cmd == "set" then
@@ -519,8 +516,7 @@ SlashCmdList.DUNGEONLEVELINGCOMPANION = function(input)
         Print("Window " .. cmd .. "ed.")
     elseif cmd == "reset" then
         if rest == "confirm" then
-            wipe(DB.runs) wipe(DB.measured) wipe(DB.log)
-            DB.cycle, DB.lastRunStart = {}, nil
+            wipe(DB.runs) wipe(DB.log)
             DB.curRun, DB.pending = nil, nil
             Print("Data wiped for this character.")
             ns.Refresh()

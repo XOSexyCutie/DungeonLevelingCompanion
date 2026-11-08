@@ -152,7 +152,7 @@ local function BuildOptions()
     Row(Check(f, "Missing XP food", Setting("warnFood")), R, -68)
     Row(Check(f, "Tent ready", Setting("warnTent")), R, -92)
     Row(Check(f, "Sleeping bag buff gone", Setting("warnBag")), R, -116)
-    Row(Check(f, "Count tent XP in estimates", Setting("useTent")), R, -140)
+    Row(Check(f, "Show camp tent status", Setting("useTent")), R, -140)
     Row(Slider(f, "Alerts start at level (all characters)", 1, 60, 1, "%d", function() return G.warnMinLevel end,
         function(v) G.warnMinLevel = v end), R + 4, -184)
 
@@ -220,15 +220,9 @@ end
 local function Tooltip(owner)
     GameTooltip:SetOwner(owner, "ANCHOR_LEFT")
     GameTooltip:SetText("DLC - Dungeon Leveling Companion", 1, 1, 1)
-    local d = ns.Recommend()
-    if d then
-        local lvl = UnitLevel("player")
-        if lvl >= d.start and lvl < 60 then
-            GameTooltip:AddLine(("Now: %s - ~%d runs left"):format(d.name, ns.RunsLeft(d)), 1, 0.82, 0)
-        else
-            GameTooltip:AddLine("Next: " .. d.name, 1, 0.82, 0)
-        end
-    end
+    local now, nextD = ns.Recommend()
+    if now[1] then GameTooltip:AddLine("Now: " .. now[1].name, 1, 0.82, 0) end
+    if nextD then GameTooltip:AddLine(("Next: %s at %d"):format(nextD.name, nextD.minLvl), 1, 0.82, 0) end
     local members = ns.PartyMembers and ns.PartyMembers() or {}
     if #members > 0 then GameTooltip:AddLine(("%d party member%s with DLC"):format(#members, #members == 1 and "" or "s"), 0.6, 0.6, 0.6) end
     GameTooltip:AddLine(YELLOW .. "Left-click|r show/hide panel")

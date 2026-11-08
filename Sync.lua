@@ -16,7 +16,7 @@ local HEARTBEAT = 60   -- resend unchanged status this often (seconds)
 local MIN_GAP = 3      -- never send more often than this
 local STALE = 300      -- forget members not heard from for this long
 
-ns.party = {} -- [name] = { name, level, cur, runsLeft, food, faction, quests = { [key] = codes }, prep = { [key] = n }, seen }
+ns.party = {} -- [name] = { name, level, cur, food, faction, quests = { [key] = codes }, prep = { [key] = n }, seen }
 
 local lastMsg, lastSent, sendQueued = nil, -100, false
 
@@ -57,13 +57,15 @@ local function OpenPrep(d)
 end
 
 local function BuildStatus()
-    local d = ns.Recommend()
+    local now, nextD = ns.Recommend()
+    local d = now[1] or nextD
     local parts = {
         "S", PROTO, (ns.faction == "Horde") and "H" or "A", UnitLevel("player"),
-        d and d.key or "-", d and ns.RunsLeft(d) or 0, (ns.FoodStatus() == "xp") and 1 or 0,
+        d and d.key or "-", 0, -- field 6 was "runs left" before 1.5.0
+        (ns.FoodStatus() == "xp") and 1 or 0,
     }
     if d then
-        for _, e in ipairs({ d, ns.ROUTE[d.index + 1] }) do
+        for _, e in ipairs({ d, (nextD ~= d) and nextD or nil }) do
             table.insert(parts, ("%s=%s,%d"):format(e.key, QuestCodes(e), OpenPrep(e)))
         end
     end
@@ -99,7 +101,7 @@ local function Parse(sender, msg)
     for field in (msg .. ";"):gmatch("([^;]*);") do f[#f + 1] = field end
     if f[1] ~= "S" or tonumber(f[2]) ~= PROTO then return end
     local m = { name = sender, faction = f[3], level = tonumber(f[4]), cur = f[5] ~= "-" and f[5] or nil,
-                runsLeft = tonumber(f[6]), food = f[7] == "1", quests = {}, prep = {}, seen = GetTime() }
+                food = f[7] == "1", quests = {}, prep = {}, seen = GetTime() }
     for i = 8, #f do
         local key, codes, prep = f[i]:match("^(%w+)=(%d*),(%d+)$")
         if key then m.quests[key], m.prep[key] = codes, tonumber(prep) end
@@ -159,8 +161,8 @@ function ns.PrintGroup()
     end
     for _, m in ipairs(members) do
         local d = m.cur and ns.BY_KEY[m.cur]
-        Print(("%s (%d) - %s%s%s"):format(m.name, m.level or 0, d and d.name or "?",
-            m.runsLeft and (", ~%d runs left"):format(m.runsLeft) or "", m.food and "" or ", |cffff5555no XP food|r"))
+        Print(("%s (%d) - %s%s"):format(m.name, m.level or 0, d and d.name or "?",
+            m.food and "" or ", |cffff5555no XP food|r"))
         for key, codes in pairs(m.quests) do
             local e = ns.BY_KEY[key]
             if e then

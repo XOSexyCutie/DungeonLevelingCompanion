@@ -205,7 +205,6 @@ take("chat")
 run('state.t = state.t + 2400; state.inInstance = false; state.instName = nil; fire("ZONE_CHANGED_NEW_AREA"); state.t = state.t + 400; tick()')
 logged = take("chat")
 check("run logged on leaving", any("Logged The Deadmines run" in m for m in logged), logged[:1])
-print("   measured dm:", list(G.DungeonLevelingCompanionDB.measured.dm.values()))
 
 # --- 3. Warnings: outdoors / rest area / dungeon ---
 run('state.level = 22; state.xp = 0; state.rested = 0; state.auras.HARMFUL = {}; state.now = state.now + 500; state.resting = true; tick()')
@@ -235,10 +234,16 @@ print(G.state.lastText)
 print("\nFAILURES:", fails)
 
 # --- 6. Quest tracker ---
-def panel_quests():
+def panel_quests(name="The Deadmines"):
+    # The quest block under the Now:/Next: line for that dungeon.
     ns.Refresh()
     lines = G.state.lastText.split("\n")
-    i = next((k for k, l in enumerate(lines) if l.startswith("Quests")), None)
+    h = next((k for k, l in enumerate(lines) if ("Now:" in l or "Next:" in l) and name in l), None)
+    if h is None: return []
+    i = None
+    for k in range(h + 1, len(lines)):
+        if "Now:" in lines[k] or "Next:" in lines[k]: break
+        if (lines[k].startswith("Quests") or lines[k].startswith("Dungeon quests")) and (" - " not in lines[k].split("(")[0] or name in lines[k]): i = k; break
     if i is None: return []
     out = [lines[i]]
     for l in lines[i+1:]:
@@ -250,7 +255,8 @@ def qlog():
 run('state.level = 17; state.xp = 0; state.inInstance = false')
 qlog()
 q = panel_quests(); print("\n".join(q))
-check("Deadmines: 6 quests listed, all 'not picked up'", q and q[0].startswith("Quests (6 left)") and all("cff999999" in l for l in q[1:]), q[:1])
+check("17 -> Next: Deadmines at 18 with its 6 quests, all 'not picked up'", any("Next:" in l and "The Deadmines" in l and "at 18" in l for l in G.state.lastText.split("\n"))
+      and q and q[0].startswith("Dungeon quests (6 left)") and all("cff999999" in l for l in q[1:]), q[:1])
 run('state.questLog = { { title = "Red Silk Bandanas", id = 214, complete = false, have = 3, need = 10 },'
     ' { title = "Oh Brother. . .", id = 167, complete = true },'
     ' { title = "The Defias Brotherhood", id = 155, complete = false } }')
@@ -260,7 +266,7 @@ check("complete quest shows 'turn in'", any("Oh Brother. . . - turn in" in l for
 # turn in Oh Brother
 run('table.remove(state.questLog, 2); state.flagged[167] = true; fire("QUEST_TURNED_IN", 167, 1200, 0); qlog_dummy = 1')
 qlog(); q = panel_quests()
-check("turned-in quest disappears", not any("Oh Brother" in l for l in q) and q[0].startswith("Quests (5 left)"), q[:1])
+check("turned-in quest disappears", not any("Oh Brother" in l for l in q) and "(5 left)" in q[0], q[:1])
 # Defias chain: turn in part (155), then next part with same name (156)
 run('table.remove(state.questLog, 2); state.flagged[155] = true; fire("QUEST_TURNED_IN", 155, 500, 0)'); qlog()
 print("   (Defias dungeon quest stays listed until its final part, id 166, is done)")
@@ -275,9 +281,9 @@ run('SlashCmdList.DUNGEONLEVELINGCOMPANION("qdone underground")'); take("chat")
 check("/fr qdone hides quest", not any("Underground Assault" in l for l in panel_quests()))
 # paladin-only quest
 run('state.level = 21'); 
-check("SFK paladin quest hidden for hunter", not panel_quests())
+check("SFK paladin quest hidden for hunter", not panel_quests("Shadowfang Keep"))
 run('state.class = "PALADIN"')
-check("SFK paladin quest shown for paladin", any("Test of Righteousness" in l for l in panel_quests()))
+check("SFK paladin quest shown for paladin", any("Test of Righteousness" in l for l in panel_quests("Shadowfang Keep")))
 run('state.class = "HUNTER"')
 # combat safety
 run('state.combat = true; fire("QUEST_LOG_UPDATE"); tick()'); ns.Refresh(); run('state.combat = false')
@@ -291,33 +297,30 @@ run('DungeonLevelingCompanionDB.achDone = {}'); take("chat")
 run('state.level = 15; state.xp = 0'); qlog()
 def panel(): ns.Refresh(); return G.state.lastText.split("\n")
 p = panel()
-check("HoT not run yet: 'Before your first run' shows Nip 'Em in the Bud", any("Before your first run" in l for l in p) and any("Nip 'Em in the Bud" in l for l in p))
-runs_with_prep = ns.RunsLeft(ns.BY_KEY.hot)
+check("15 -> Now: Hall of Thanes, 'Before you go' shows Nip 'Em in the Bud", any("Now:" in l and "Hall of Thanes" in l for l in p)
+      and any("Before you go" in l for l in p) and any("Nip 'Em in the Bud" in l for l in p), p[:4])
 run('state.flagged[0] = false')
 # picking up Old Ironforge Incursion (unlocked) -> Nip step done
 run('state.questLog = { { title = "Old Ironforge Incursion", id = 9100, complete = false } }'); qlog()
 check("unlock in log -> Nip 'Em step done", not any("Nip 'Em in the Bud" in l for l in panel()))
-# level 16 in HoT leg: next = Deadmines prep should show (lvl >= 17-2)
+# level 16: Deadmines (min 18) is next - its prequests show already
 run('state.level = 16; state.xp = 0; DungeonLevelingCompanionDB.runs.hot = 2'); qlog()
 p = panel(); print("\n".join(p[:12]))
-check("Prep for The Deadmines shown near swap", any("Prep for The Deadmines" in l for l in p))
-check("Defias chain step shows part 1/6", any("The Defias Brotherhood" in l and "1/6" not in l for l in p) or True)
+i_next = next((k for k, l in enumerate(p) if "Next:" in l and "The Deadmines" in l), None)
+check("Next: Deadmines at 18 with 'Prequests:' under it", i_next is not None and p[i_next + 1].startswith("|cffffff00Prequests:"), p[:12])
+check("XP to go shown for the next dungeon", i_next is not None and "2 levels" in p[i_next], p[i_next] if i_next is not None else None)
 xp_prep, _ = ns.PrepLeft(ns.BY_KEY.dm)
 check("DM prep XP = real chain XP 6100", xp_prep == 6100, xp_prep)
-left_with = ns.RunsLeft(ns.BY_KEY.hot)
 # chain progress: parts 65,132 done, 135 in log 2/5
 run('state.flagged[65] = true; state.flagged[132] = true; state.questLog = { { title = "The Defias Brotherhood", id = 135, complete = false, have = 2, need = 5 } }'); qlog()
 p = panel()
 check("parts 1-2 [x], part 3 in log with progress", any("[x] 2. The Defias Brotherhood (1/6)" in l for l in p) and any("[x] 3. The Defias Brotherhood (2/6)" in l for l in p) and any("[ ] 4. The Defias Brotherhood (3/6) 2/5" in l for l in p), [l for l in p if "Defias" in l])
 xp_prep2, _ = ns.PrepLeft(ns.BY_KEY.dm)
 check("prep XP drops as parts finish (680+340+1350+1700)", xp_prep2 == 4070, xp_prep2)
-check("HoT leg counts the remaining DM prep XP", ns.LegPrepXP(ns.BY_KEY.hot) == 4070, ns.LegPrepXP(ns.BY_KEY.hot))
-run("state.xp = state.xp + 2030; fire(\"PLAYER_XP_UPDATE\", \"player\")")
-check("after earning the XP from 2 parts, runs left are back to before", ns.RunsLeft(ns.BY_KEY.hot) == left_with, (ns.RunsLeft(ns.BY_KEY.hot), left_with))
-# chain done (155 flagged) -> prep gone, 'no prereqs' / nothing
+# chain done (155 flagged) -> prequests gone
 run('for _, id in ipairs({135,141,142,155}) do state.flagged[id] = true end; state.questLog = {}'); qlog()
 p = panel()
-check("chain done -> DM prep disappears", not any("Prep for The Deadmines" in l and "Defias" in l for l in p) and not any("(part" in l for l in p))
+check("chain done -> Defias steps gone from DM prequests", all("Defias" not in s.step.q for s in ns.PrepOpen(ns.BY_KEY.dm).values()), [s.step.q for s in ns.PrepOpen(ns.BY_KEY.dm).values()])
 # Excavation: unlock by Horrors in the Highland in log completes 3 Rethiel steps
 run('state.level = 26; state.xp = 0; DungeonLevelingCompanionDB.runs.rfk = 1; state.questLog = { { title = "Horrors in the Highland", id = 9200, complete = false } }'); qlog()
 steps = [s.step.q for s in ns.PrepOpen(ns.BY_KEY.exc).values()]
@@ -334,32 +337,46 @@ check("optional ZF steps excluded from prep XP", xp_zf == 40 * 75, xp_zf)
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
 
-# --- 8. Finished quests don't count toward run XP ---
+# --- 8. Now / Next / Also open ---
 run('SlashCmdList.DUNGEONLEVELINGCOMPANION("reset confirm"); state.questLog = {}; state.flagged = {}; DungeonLevelingCompanionDB.questDone = {}; DungeonLevelingCompanionDB.questIDs = {}'); take("chat")
-run('state.level = 22; state.xp = 0'); qlog()
-bfd = ns.BY_KEY.bfd
-q_all = ns.QuestXP(bfd); n_all = ns.QuestsLeft(bfd)
-run('state.flagged[971] = true; state.flagged[1275] = true'); qlog()
-q_two = ns.QuestXP(bfd); n_two = ns.QuestsLeft(bfd)
-check("2 of 4 BFD quests done -> half the quest XP", n_all == 4 and n_two == 2 and abs(q_two - q_all / 2) < 1, (n_all, n_two, q_all, q_two))
-run('SlashCmdList.DUNGEONLEVELINGCOMPANION("qdone twilight falls"); SlashCmdList.DUNGEONLEVELINGCOMPANION("qdone villainy")'); take("chat")
-check("all quests done -> 0 quest XP", ns.QuestXP(bfd) == 0 and ns.QuestsLeft(bfd) == 0, ns.QuestXP(bfd))
-run('DungeonLevelingCompanionDB.runs.bfd = 1; state.flagged[1199] = nil'); run('DungeonLevelingCompanionDB.questDone["twilightfalls"] = nil'); qlog()
-check("quest left after first run still counts on the next run", ns.QuestsLeft(bfd) == 1 and ns.QuestXP(bfd) > 0)
+run('DungeonLevelingCompanionDB.achDone = {}; state.level = 25; state.xp = 0'); qlog()
+now, nxt, missed, _ = ns.Recommend()
+nowk = [d.key for d in now.values()]
+check("25: open = WC, SFK, Stockade, BFD, Excavation", nowk == ["wc", "sfk", "stocks", "bfd", "exc"], nowk)
+nextall = [d.key for d in ns.Recommend()[3].values()]
+check("25: next = SM Graveyard + Dalaran, both at 28", nxt.minLvl == 28 and nextall == ["smgy", "dal"], nextall)
+check("25: outleveled Spelunker dungeons are 'missed'", [d.key for d in missed.values()] == ["hot", "rol", "dm"], [d.key for d in missed.values()])
+p = panel()
+check("panel: Now WC, Next Dalaran, Also open lists the rest", any("Now:" in l and "Wailing Caverns" in l for l in p)
+      and any("Next:" in l and "SM Graveyard + City of Dalaran" in l and "at 28" in l for l in p)
+      and any("Also open:" in l and "Shadowfang Keep" in l and "Excavation Site" in l for l in p), p)
+check("Dalaran prequests (An Alarming Request) shown before 28, labelled", any("Prequests - City of Dalaran" in l for l in p) and any("An Alarming Request" in l for l in p), p)
+# a dungeon with all quests done and a run logged drops out of 'open'
+run('DungeonLevelingCompanionDB.runs.wc = 1')
+for q in ns.BY_KEY.wc.questInfo.values(): G.DungeonLevelingCompanionDB.questDone[q.key] = "manual"
+qlog(); now, nxt, missed, _ = ns.Recommend()
+check("WC run + quests done -> no longer open", "wc" not in [d.key for d in now.values()] and now[1].key == "sfk", [d.key for d in now.values()])
+run('DungeonLevelingCompanionDB.questDone["deviatehides"] = nil'); qlog()
+check("run logged but a quest left -> still open", "wc" in [d.key for d in ns.Recommend()[0].values()])
+run('DungeonLevelingCompanionDB.runs.wc = nil')
+# level 60: Spelunker leftovers, no next
+run('state.level = 60'); now, nxt, missed, _ = ns.Recommend()
+check("60: open = Spelunker dungeons not run, no next", nxt is None and len(now) > 0 and all(d.tier for d in now.values()), (nxt, len(now)))
+check("no errors", not take("errors"))
 
 # --- 9. Horde route ---
 run('state.faction = "Horde"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); out = take("chat")
 check("faction auto -> Horde route", any("Horde route" in l for l in out), out)
 keys = [d.key for d in ns.ROUTE.values()]
 check("Horde route starts RFC, Ruins, WC; no HoT/Stockade", keys[:3] == ["rfc", "rol", "wc"] and "hot" not in keys and "stocks" not in keys, keys[:6])
-run('state.level = 15; state.xp = 0'); d, _ = ns.Recommend()
+run('state.level = 15; state.xp = 0'); d = ns.Focus()
 check("Horde at 15 -> Ragefire Chasm", d.key == "rfc", d.key)
-run('state.level = 17'); d, _ = ns.Recommend()
-check("Horde at 17 -> Ruins of Lordaeron", d.key == "rol", d.key)
+run('state.level = 19'); d = ns.Focus()
+check("Horde at 19 (past RFC) -> Ruins of Lordaeron", d.key == "rol", d.key)
 qlog(); p = panel()
 check("Horde Ruins quests shown (Light's Justice)", any("Light's Justice" in l for l in p))
-run('state.level = 19'); qlog(); d, _ = ns.Recommend(); steps = [s.step.q for s in ns.PrepOpen(ns.BY_KEY.wc).values()]
-check("Horde WC prereqs include The Forgotten Pools chain", d.key == "wc" and "The Forgotten Pools" in steps, (d.key, steps))
+steps = [s.step.q for s in ns.PrepOpen(ns.BY_KEY.wc).values()]
+check("Horde WC prereqs include The Forgotten Pools chain", "The Forgotten Pools" in steps, steps)
 run('state.questLog = { { title = "Leaders of the Fang", id = 1, complete = false } }'); qlog()
 steps = [s.step.q for s in ns.PrepOpen(ns.BY_KEY.wc).values()]
 check("Leaders of the Fang in log -> Forgotten Pools chain done", steps == ["Raptor Horns", "...and that note you found"], steps)
@@ -559,7 +576,7 @@ run('state.level = 21; state.xp = 0; state.now = state.now + 100; state.inGroup 
 sent = [(m[1], m[2], m[3]) for m in G.state.sent.values()]
 check("joining a group asks for status and sends ours", any(s[1] == "R" for s in sent) and any(s[1].startswith("S;1;A;21;") for s in sent), sent)
 check("sent to PARTY with the DLCSYNC prefix", all(s[0] == "DLCSYNC" and s[2] == "PARTY" for s in sent), sent)
-d = ns.Recommend()[0]
+d = ns.Focus()
 n = len(list(d.questInfo.values()))
 run(f'fire("CHAT_MSG_ADDON", "DLCSYNC", "S;1;A;22;{d.key};2;0;{d.key}={"1" * n},1", "PARTY", "Bob")')
 lines = panel()
@@ -587,36 +604,9 @@ G.DungeonLevelingCompanionDB.settings.showSpelunker = False; lines = panel()
 check("Spelunker section can be hidden", not any("Spelunker:" in l for l in lines))
 G.DungeonLevelingCompanionDB.settings.showSpelunker = True
 run('state.level = 20'); lines = panel()
-rec = ns.Recommend()[0].key
+rec = ns.Focus().key
 check("Ruins of Lordaeron shows its secret boss", rec != "rol" or any("Secret boss:" in l and "Viktor" in l for l in lines), (rec, [l for l in lines if "Secret" in l]))
 check("no errors", not take("errors"), take("errors"))
-print("\nFAILURES:", fails)
-
-# --- 18. Measured run time (start to start) feeds the tent estimate ---
-run('SlashCmdList.DUNGEONLEVELINGCOMPANION("reset confirm")'); take("chat")
-dal = ns.BY_KEY.dal
-def mins(): r = ns.RunMinutes(dal); return (round(r[0], 1), r[1])
-check("no runs -> estimate from Data.lua", mins() == (dal.min, False), mins())
-tent_est = ns.TentPerRun(dal)
-run('ns_t0 = 1000000')
-ns.RecordRun(dal, 0, 32, G.ns_t0)
-check("one run -> still the estimate", mins() == (dal.min, False), mins())
-ns.RecordRun(dal, 0, 32, G.ns_t0 + 40 * 60)
-ns.RecordRun(dal, 0, 32, G.ns_t0 + 90 * 60)
-check("two gaps (40m, 50m) -> 45m measured", mins() == (45.0, True), mins())
-check("faster runs -> less tent XP per run", ns.TentPerRun(dal) < tent_est, (ns.TentPerRun(dal), tent_est))
-ns.RecordRun(dal, 0, 32, G.ns_t0 + 90 * 60 + 5 * 3600)
-check("gap over 2h (break) ignored", mins() == (45.0, True), mins())
-ns.RecordRun(ns.BY_KEY.smlib, 0, 33, G.ns_t0 + 6 * 3600 + 1800)
-ns.RecordRun(dal, 0, 32, G.ns_t0 + 7 * 3600)
-check("dungeon swap in between ignored", mins() == (45.0, True), mins())
-ns.RecordRun(dal, 0, 32, G.ns_t0 + 7 * 3600 + 30 * 60)
-check("third gap (30m) -> 40m", mins() == (40.0, True), mins())
-run('SlashCmdList.DUNGEONLEVELINGCOMPANION("undo")'); take("chat")
-check("/dlc undo removes that gap -> 45m", mins() == (45.0, True), mins())
-run('state.level = 32; state.xp = 0'); lines = panel()
-check("panel shows measured minutes", any("45m/run (measured)" in l for l in lines) or ns.Recommend()[0].key != "dal", [l for l in lines if "m/run" in l])
-check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
 
 # --- 19. Click-through toggle ---
@@ -625,29 +615,6 @@ run('SlashCmdList.DUNGEONLEVELINGCOMPANION("clickthrough")'); out = take("chat")
 check("/dlc clickthrough -> panel ignores the mouse", G.DungeonLevelingCompanionFrame.mouse is False and G.DungeonLevelingCompanionDB.settings.clickThrough, out)
 run('SlashCmdList.DUNGEONLEVELINGCOMPANION("clickthrough")'); take("chat")
 check("toggle again -> mouse back on", G.DungeonLevelingCompanionFrame.mouse is True)
-check("no errors", not take("errors"))
-print("\nFAILURES:", fails)
-
-# --- 20. Known per-run XP (Hall of Thanes) ---
-run('DungeonLevelingCompanionDB.measured.hot = nil')
-xp, measured = ns.XPPerRun(ns.BY_KEY.hot)
-check("HoT uses 4461 XP/run until measured", xp == 4461 and not measured, (xp, measured))
-run('DungeonLevelingCompanionDB.measured.hot = { 5000 }')
-xp, measured = ns.XPPerRun(ns.BY_KEY.hot)
-check("measured runs still win", xp == 5000 and measured, (xp, measured))
-run('DungeonLevelingCompanionDB.measured.hot = nil')
-check("no errors", not take("errors"))
-print("\nFAILURES:", fails)
-
-# --- 21. HoT estimate recalibrates from the group's real runs ---
-run('wipe(DungeonLevelingCompanionDB.measured); DungeonLevelingCompanionDB.settings.calibOverride = nil')
-dm_base = ns.XPPerRun(ns.BY_KEY.dm)[0]
-run('DungeonLevelingCompanionDB.measured.hot = { 4000, 4000, 4000, 3000, 3000, 3000 }')
-xp, measured = ns.XPPerRun(ns.BY_KEY.hot)
-check("HoT follows the latest 3 runs as you level", xp == 3000 and measured, (xp, measured))
-dm_now = ns.XPPerRun(ns.BY_KEY.dm)[0]
-check("HoT runs below 4461 scale later estimates down", abs(dm_now - dm_base * 3000 / 4461) < 0.01, (dm_base, dm_now))
-run('wipe(DungeonLevelingCompanionDB.measured)')
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
 
@@ -662,7 +629,6 @@ check("DM prep XP unchanged by the pickup (6100)", ns.PrepLeft(ns.BY_KEY.dm)[0] 
 wc_xp = ns.PrepLeft(ns.BY_KEY.wc)[0]
 check("WC prep = Raptor Horns 1275 + 3150 + 3150 + 315", wc_xp == 1275 + 6615, wc_xp)
 check("RoL prep = 3150 + 3150 + 2350", ns.PrepLeft(ns.BY_KEY.rol)[0] == 8650, ns.PrepLeft(ns.BY_KEY.rol))
-check("DM leg counts the WC prep (bag Barrens/Stonetalon)", ns.LegPrepXP(ns.BY_KEY.dm) == 6100 + 7890, ns.LegPrepXP(ns.BY_KEY.dm))
 # note picked up in Westfall: DM step done, WC step 'in log'
 run('state.questLog = { { title = "...and that note you found", id = 96500, complete = false } }'); qlog()
 check("note in log -> DM pickup done", steps("dm")[0][1] == "done", steps("dm")[0])
@@ -677,18 +643,6 @@ check("RoL prep XP still counts Wet Job until turned in (8650)", ns.PrepLeft(ns.
 run('state.questLog = {}; state.bag = true'); qlog(); ns.MarkBagsDirty()
 check("bag owned -> RoL prep empty", len(list(ns.PrepOpen(ns.BY_KEY.rol).values())) == 0)
 check("bag owned -> WC only Raptor Horns left", [s.step.q for s in ns.PrepOpen(ns.BY_KEY.wc).values()] == ["Raptor Horns"])
-# bag bonus applies to the current leg once you own it
-run('state.level = 17; state.xp = 0'); ns.MarkBagsDirty()
-with_bag = ns.QuestXP(ns.BY_KEY.dm)
-run('state.bag = false'); ns.MarkBagsDirty()
-without = ns.QuestXP(ns.BY_KEY.dm)
-check("owning the bag adds 3% to the DM leg", abs(with_bag / without - 1.03) < 1e-9, (with_bag, without))
-# 'enough runs' line when the next dungeon's prep covers the rest of the leg
-run('state.level = 16; state.xp = 15000; DungeonLevelingCompanionDB.runs.hot = 5')
-for q in ns.BY_KEY.hot.questInfo.values(): G.DungeonLevelingCompanionDB.questDone[q.key] = "manual"
-qlog()
-p = panel(); print("\n".join(p[:6]))
-check("0 HoT runs left -> 'do the prep now' line", ns.RunsLeft(ns.BY_KEY.hot) == 0 and any("Enough runs - do the prereqs for The Deadmines now" in l for l in p), ns.RunsLeft(ns.BY_KEY.hot))
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
 
@@ -707,35 +661,26 @@ check("no bag steps on Horde Ruins of Lordaeron", bagsteps("rol") == [], steps("
 # note in log: WC pickup done, DM turn-in in log
 run('state.questLog = { { title = "...and that note you found", id = 79007, complete = false } }'); qlog()
 check("Horde note in log -> WC pickup done, DM turn-in in log", steps("wc")[-1][1] == "done" and steps("dm")[0] == ("...and that note you found", "inlog"), (steps("wc")[-1], steps("dm")))
-# bag bonus starts at the Excavation Site for Horde, at Ruins for Alliance
-run('state.questLog = {}; state.level = 14'); qlog(); ns.MarkBagsDirty()
-check("Horde bag finishes in Excavation Site prep", ns.ROUTE[ns.bagIndex].key == "exc", ns.bagIndex)
-base_rfk = ns.QuestXP(ns.BY_KEY.rfk); base_exc = ns.QuestXP(ns.BY_KEY.exc)
-run('state.faction = "Alliance"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
-check("Alliance bag finishes in Ruins of Lordaeron prep", ns.ROUTE[ns.bagIndex].key == "rol", ns.bagIndex)
-run('state.faction = "Horde"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
-check("Horde RFK leg has no bag bonus yet", abs(base_rfk - ns.BY_KEY.rfk.quests * 26 * 125 * 1.25) < 1e-6, base_rfk)
-check("Horde Excavation leg gets the bag bonus", abs(base_exc / (ns.BY_KEY.exc.quests * 28 * 125 * 1.25) - 1.03) < 1e-9, base_exc)
 check("no errors", not take("errors"))
 
 # --- Back-to-back runs ---
 run('state.faction = "Alliance"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
-def sfk(): return list((G.DungeonLevelingCompanionDB.measured.sfk or {}).values()) if G.DungeonLevelingCompanionDB.measured.sfk else []
+def sfk(): return G.DungeonLevelingCompanionDB.runs.sfk or 0
 def enter(): run('state.inInstance = true; state.instName = "Shadowfang Keep"; fire("ZONE_CHANGED_NEW_AREA"); tick()')
 def leave(): run('state.t = state.t + 60; state.inInstance = false; state.instName = nil; fire("ZONE_CHANGED_NEW_AREA"); tick()')
-run('DungeonLevelingCompanionDB.measured.sfk = nil; DungeonLevelingCompanionDB.curRun = nil; DungeonLevelingCompanionDB.lastRunStart = nil;'
-    'state.level = 21; state.xp = 0; state.rested = 0; fire("PLAYER_XP_UPDATE", "player")')
+run('DungeonLevelingCompanionDB.runs.sfk = nil; DungeonLevelingCompanionDB.curRun = nil;'
+    'state.level = 23; state.xp = 0; state.rested = 0; fire("PLAYER_XP_UPDATE", "player")')
 # run 1, someone else resets while we're outside, run 2 starts within the grace period
 enter(); run('kill(3000); fire("ENCOUNTER_END", 1, "Rethilgore", 1, 5, 1); kill(2000); fire("ENCOUNTER_END", 9, "Arugal", 1, 5, 1)')
 leave(); run('state.t = state.t + 120'); enter()
 run('kill(4000)'); take("chat")
 run('fire("ENCOUNTER_END", 1, "Rethilgore", 1, 5, 1)')
-check("same boss twice -> first run logged at re-entry", sfk() == [5000], sfk())
+check("same boss twice -> first run logged", sfk() == 1, sfk())
 run('kill(1000)'); leave(); run('state.t = state.t + 400; tick()')
-check("second run logged with its own XP", sfk() == [5000, 5000], sfk())
+check("second run logged too", sfk() == 2, sfk())
 # a wipe re-pull of the same boss without leaving doesn't split
 enter(); run('kill(500); fire("ENCOUNTER_END", 1, "Rethilgore", 1, 5, 0); fire("ENCOUNTER_END", 1, "Rethilgore", 1, 5, 1); kill(500)')
-check("failed + successful pull is still one run", G.DungeonLevelingCompanionDB.curRun.xp == 1000, G.DungeonLevelingCompanionDB.curRun.xp)
+check("failed + successful pull is still one run", G.DungeonLevelingCompanionDB.curRun.xp == 1000 and sfk() == 2, G.DungeonLevelingCompanionDB.curRun.xp)
 # group member resets -> run ends right away via sync
 leave(); take("chat")
 run('state.inGroup = true; state.party.Bob = true; fire("CHAT_MSG_ADDON", "DLCSYNC", "X", "PARTY", "Bob")')
@@ -744,18 +689,11 @@ check("reset from a group member ends the run", G.DungeonLevelingCompanionDB.cur
 enter(); run('kill(800)'); leave(); run('state.sent = {}; fire("CHAT_MSG_SYSTEM", "Shadowfang Keep has been reset.")')
 sent = [G.state.sent[i][2] for i in range(1, len(G.state.sent) + 1)]
 check("our reset is sent to the group", "X" in sent and G.DungeonLevelingCompanionDB.curRun is None, sent)
-# re-entered run far above the estimate isn't used
-run('DungeonLevelingCompanionDB.measured.sfk = nil'); enter(); run('kill(100)'); leave(); run('state.t = state.t + 60'); enter()
-run('kill(25000)'); leave(); run('state.t = state.t + 400; tick()')
-check("merged-looking re-entered run not used for estimates", sfk() == [], sfk())
-# one-time cleanup of old merged runs
-run('DungeonLevelingCompanionDB.mergedCleanup = nil; DungeonLevelingCompanionDB.measured.sfk = { 4015, 19869 }; DungeonLevelingCompanionDB.measured.stocks = { 29941 }; DungeonLevelingCompanionDB.measured.bfd = { 12133 }')
-ns.DropMergedRuns()
-m = G.DungeonLevelingCompanionDB.measured
-check("cleanup drops merged SFK/Stockade runs, keeps normal ones",
-      list(m.sfk.values()) == [4015] and len(m.stocks) == 0 and list(m.bfd.values()) == [12133], (list(m.sfk.values()), len(m.stocks)))
-run('DungeonLevelingCompanionDB.measured.stocks = { 29941 }'); ns.DropMergedRuns()
-check("cleanup only runs once", len(G.DungeonLevelingCompanionDB.measured.stocks) == 1)
+# old XP-estimate data and settings are cleared on load
+run('DungeonLevelingCompanionDB.measured = { sfk = { 19869 } }; DungeonLevelingCompanionDB.cycle = {}; DungeonLevelingCompanionDB.settings.groupShare = 0.28'); ns.InitDB()
+check("pre-1.5.0 estimate data cleared", G.DungeonLevelingCompanionDB.measured is None and G.DungeonLevelingCompanionDB.cycle is None
+      and G.DungeonLevelingCompanionDB.settings.groupShare is None)
+check("no errors", not take("errors"))
 # Wowhead quest lists for the new dungeons
 qn = lambda k: [q.name for q in ns.BY_KEY[k].questInfo.values()]
 check("Drowned City Alliance quests from Wowhead", len(qn("drowned")) == 5 and "Magics of the Drowned City" in qn("drowned"), qn("drowned"))

@@ -6,19 +6,10 @@ local MAX_LEVEL = 60
 local DEFAULT_SETTINGS = {
     warnFood = true,        -- warn when the Well Fed XP buff is missing
     warnTent = true,        -- warn when Boosted Rest is gone and rested XP is below the tent amount
-    useTent = true,         -- count tent rested XP in estimates
+    useTent = true,         -- show the camp tent status and alerts
     tentFrac = 0.05,        -- tent tops rested XP up to this fraction of a level
-    tentPerHour = 1,        -- Boosted Rest debuff = 1 tent per hour
-    foodBonus = 0.05,       -- Well Fed: +5% XP from kills
     warnBag = true,         -- warn when you own the Cozy Sleeping Bag but Well-Rested is missing
-    bagBonus = 0.03,        -- Well-Rested: +1% XP per stack, 3 stacks
     bagThrottle = 120,      -- seconds between repeated sleeping bag warnings
-    groupShare = 0.28,      -- classic 5-man XP share per person
-    eliteMult = 2,
-    mobPerLevel = 0.05,
-    questPerLevel = 125,    -- at-level quest XP ~= level x 125
-    questBonus = 0.25,      -- Forever dungeon-quest bonus (guess)
-    calibOverride = nil,    -- force a calibration factor; nil = auto from measured runs
     foodThrottle = 90,      -- seconds between repeated food warnings
     tentThrottle = 120,     -- seconds between repeated tent warnings
     shown = true,
@@ -45,9 +36,12 @@ local function InitDB()
     DungeonLevelingCompanionDB = DungeonLevelingCompanionDB or {}
     DB = DungeonLevelingCompanionDB
     DB.runs = DB.runs or {}          -- [key] = completed runs
-    DB.measured = DB.measured or {}  -- [key] = { trash XP per run, ... } (rested bonus excluded)
     DB.log = DB.log or {}            -- { {key=, xp=, level=, t=}, ... } newest last
     DB.settings = DB.settings or {}
+    -- 1.5.0 dropped the XP-per-run estimates: clear what only they used.
+    DB.measured, DB.cycle, DB.lastRunStart, DB.mergedCleanup = nil, nil, nil, nil
+    for _, k in ipairs({ "tentPerHour", "foodBonus", "bagBonus", "groupShare", "eliteMult", "mobPerLevel",
+                         "questPerLevel", "questBonus", "calibOverride" }) do DB.settings[k] = nil end
     for k, v in pairs(DEFAULT_SETTINGS) do
         if DB.settings[k] == nil then DB.settings[k] = v end
     end
@@ -286,85 +280,8 @@ function ns.HasSleepingBag()
 end
 
 ---------------------------------------------------------------------------
--- Estimates (same math as the Google Sheet)
+-- Where you are on the route
 ---------------------------------------------------------------------------
--- Average of the last `n` entries (all if n is nil).
-local function Avg(t, n)
-    if not t or #t == 0 then return nil end
-    local first = n and math.max(1, #t - n + 1) or 1
-    local s = 0
-    for i = first, #t do s = s + t[i] end
-    return s / (#t - first + 1)
-end
-
--- Per-run XP falls as you outlevel a dungeon, so only the latest runs count.
-local RECENT_RUNS = 3
-
-local function RawTrash(d)
-    local L = (d.start + d.to) / 2
-    return d.elites * (5 * L + 45) * (1 + S.mobPerLevel * d.off) * S.eliteMult * S.groupShare
-end
-
--- Sleeping bag bonus for a leg: active for legs still ahead once you own the bag, else
--- assumed from the leg whose prereqs finish the chain (Alliance: Ruins of Lordaeron,
--- Horde: Excavation Site).
-local function BagBonus(d)
-    if d.to > UnitLevel("player") and ns.HasSleepingBag() then return S.bagBonus end
-    return (ns.bagIndex and d.index >= ns.bagIndex) and S.bagBonus or 0
-end
-
--- Kill XP multiplier for a leg: food + sleeping bag.
-local function KillBonus(d)
-    return 1 + S.foodBonus + BagBonus(d)
-end
-
--- Starting estimate for a run before calibration: the known figure (d.xp) or the formula.
-local function Baseline(d)
-    return d.xp or RawTrash(d) * KillBonus(d)
-end
-
-function ns.Calibration()
-    if S.calibOverride then return S.calibOverride end
-    local measured, formula = 0, 0
-    for _, d in ipairs(ROUTE) do
-        local avg = Avg(DB.measured[d.key], RECENT_RUNS)
-        if avg then
-            measured = measured + avg
-            formula = formula + Baseline(d)
-        end
-    end
-    if formula > 0 then return measured / formula end
-    return 1
-end
-
--- Your own latest runs once you have them, else the estimate scaled by how your group's
--- measured runs compare with their estimates (Calibration).
-function ns.XPPerRun(d)
-    local avg = Avg(DB.measured[d.key], RECENT_RUNS)
-    if avg then return avg, true end
-    return Baseline(d) * ns.Calibration(), false
-end
-
--- Minutes per run: measured start-to-start time once you have it, else the estimate.
-function ns.RunMinutes(d)
-    local avg = Avg(DB.cycle and DB.cycle[d.key])
-    if avg then return avg / 60, true end
-    return d.min, false
-end
-
-function ns.TentPerRun(d)
-    if not S.useTent then return 0 end
-    local lvl = math.floor((d.start + d.to) / 2)
-    local need = XP[lvl] or 0
-    return math.min(ns.XPPerRun(d), S.tentFrac * need * S.tentPerHour * ns.RunMinutes(d) / 60)
-end
-
--- XP from d's dungeon quests you haven't finished yet (finished ones aren't counted).
-function ns.QuestXP(d)
-    local left = ns.QuestsLeft and ns.QuestsLeft(d) or d.quests
-    return left * d.to * S.questPerLevel * (1 + S.questBonus) * (1 + BagBonus(d))
-end
-
 -- XP still needed to reach `toLevel` from the player's current level/XP.
 local function XPRemaining(toLevel)
     local lvl = UnitLevel("player")
@@ -373,55 +290,43 @@ local function XPRemaining(toLevel)
     for l = lvl + 1, toLevel - 1 do remaining = remaining + (XP[l] or 0) end
     return remaining
 end
+ns.XPRemaining = XPRemaining
 
--- XP that prerequisite quests will give during d's leg: d's own unfinished prep (if you
--- haven't run it yet) plus the next dungeon's prep, which you do before swapping.
-function ns.LegPrepXP(d)
-    if not ns.PrepLeft then return 0 end
-    local xp = 0
-    if (DB.runs[d.key] or 0) == 0 then xp = xp + ns.PrepLeft(d) end
-    local nextD = ROUTE[d.index + 1]
-    if nextD and nextD.start < MAX_LEVEL then xp = xp + ns.PrepLeft(nextD) end
-    return xp
+-- Still worth doing: not run yet, or quests left for it (prereqs only matter before the first run).
+local function HasWork(d)
+    if not ns.IsDone(d) then return true end
+    return ns.DungeonQuests and #ns.DungeonQuests(d) > 0 or false
 end
 
--- Runs left on dungeon d to hit its "run until" level (at least 1 if never run),
--- counting the XP you'll get from prerequisite quests along the way.
-function ns.RunsLeft(d)
-    local done = DB.runs[d.key] or 0
-    local remaining = XPRemaining(d.to) - ns.LegPrepXP(d)
-    local perRun = ns.XPPerRun(d) + ns.TentPerRun(d)
-    if perRun <= 0 then return done == 0 and 1 or 0 end
-    -- Unfinished quests are turned in on the next run, whether it's your first or not.
-    local questXP = ns.QuestXP(d)
-    if done == 0 or questXP > 0 then
-        local next = perRun + questXP
-        return 1 + math.max(0, math.ceil((remaining - next) / perRun))
-    end
-    return math.max(0, math.ceil(remaining / perRun))
-end
-
--- The dungeon you should be running now, plus Spelunker dungeons you've outleveled.
+-- now    dungeons in your level range that still have something to do (route order)
+-- next   the next dungeon to open up (lowest min level above yours)
+-- missed Spelunker dungeons you've outleveled without running them
+-- nextAll every dungeon opening at that same level (e.g. SM Graveyard and Dalaran at 28)
+-- At 60, `now` is the Spelunker dungeons still to run and `next` is nil.
 function ns.Recommend()
     local lvl = UnitLevel("player")
-    local current, missed = nil, {}
-    if lvl < MAX_LEVEL then
-        for _, d in ipairs(ROUTE) do
-            if lvl >= d.start and lvl < d.to then current = d break end
-        end
-        if not current and lvl < ROUTE[1].start then current = ROUTE[1] end
-    else
-        for _, d in ipairs(ROUTE) do
-            if d.tier and not ns.IsDone(d) then current = d break end
-        end
-    end
+    local now, nextD, missed, nextAll = {}, nil, {}, {}
     for _, d in ipairs(ROUTE) do
-        if d.tier and d ~= current and not ns.IsDone(d) and lvl >= d.to and lvl < MAX_LEVEL then
+        if lvl >= MAX_LEVEL then
+            if d.tier and not ns.IsDone(d) then table.insert(now, d) end
+        elseif lvl >= d.minLvl and lvl <= d.maxLvl then
+            if HasWork(d) then table.insert(now, d) end
+        elseif lvl < d.minLvl then
+            nextD = nextD or d
+            if d.minLvl == nextD.minLvl then table.insert(nextAll, d) end
+        elseif d.tier and not ns.IsDone(d) then
             table.insert(missed, d)
         end
     end
-    return current, missed
+    return now, nextD, missed, nextAll
 end
+
+-- The one dungeon the panel and group sync focus on: the first open one, else the next.
+function ns.Focus()
+    local now, nextD = ns.Recommend()
+    return now[1] or nextD
+end
+
 
 -- A dungeon counts as done if we logged a run or the Spelunker achievement says so.
 function ns.IsDone(d)
@@ -483,65 +388,13 @@ local function ResolveRun(run)
 end
 
 ---------------------------------------------------------------------------
--- Recording runs
+-- Recording runs (for Spelunker progress and the run log)
 ---------------------------------------------------------------------------
--- Run time for the tent estimate = start of one run to the start of the next run of the same
--- dungeon, so resets, walking back in and waiting for people count too. Gaps over 2 hours
--- (breaks, logging off) and dungeon swaps aren't measured.
-local MIN_CYCLE, MAX_CYCLE = 5 * 60, 2 * 3600
-
--- A run this far above its estimate after walking back in is almost surely two clears merged
--- (the instance was reset by someone else, so we never saw the reset message).
-local MERGED_RATIO = 1.6
-local function LooksMerged(d, xp)
-    local ref = math.max(Baseline(d), Avg(DB.measured[d.key], RECENT_RUNS) or 0)
-    return ref > 0 and xp > ref * MERGED_RATIO
-end
-
--- One-time cleanup of runs logged before 1.4.0, when back-to-back clears could merge into one.
-function ns.DropMergedRuns()
-    if DB.mergedCleanup then return end
-    DB.mergedCleanup = 1
-    for _, d in ipairs(ROUTE) do
-        local m = DB.measured[d.key]
-        if m then
-            local ref = Baseline(d)
-            for i = #m, 1, -1 do
-                if ref > 0 and m[i] > ref * MERGED_RATIO then
-                    Print(("Dropped a %d XP %s run from the estimates (looks like back-to-back runs counted as one)."):format(m[i], d.name))
-                    table.remove(m, i)
-                end
-            end
-        end
-    end
-end
-
-function ns.RecordRun(d, xp, level, start, reentered)
-    if xp and xp > 0 and reentered and LooksMerged(d, xp) then
-        Print(("%s: %d XP looks like more than one run (instance reset without us seeing it) - not used for estimates."):format(d.name, xp))
-        xp = 0
-    end
+function ns.RecordRun(d, xp, level)
     DB.runs[d.key] = (DB.runs[d.key] or 0) + 1
-    local gap
-    local last = DB.lastRunStart
-    if start and last and last.key == d.key and start - last.t >= MIN_CYCLE and start - last.t <= MAX_CYCLE then
-        gap = start - last.t
-        DB.cycle = DB.cycle or {}
-        DB.cycle[d.key] = DB.cycle[d.key] or {}
-        table.insert(DB.cycle[d.key], gap)
-        while #DB.cycle[d.key] > 10 do table.remove(DB.cycle[d.key], 1) end
-    end
-    DB.lastRunStart = start and { key = d.key, t = start } or nil
-    if xp and xp > 0 and (level or 0) < MAX_LEVEL then
-        DB.measured[d.key] = DB.measured[d.key] or {}
-        table.insert(DB.measured[d.key], xp)
-        while #DB.measured[d.key] > 10 do table.remove(DB.measured[d.key], 1) end
-    end
-    table.insert(DB.log, { key = d.key, xp = xp or 0, level = level, t = time(), gap = gap })
+    table.insert(DB.log, { key = d.key, xp = xp or 0, level = level, t = time() })
     while #DB.log > 200 do table.remove(DB.log, 1) end
-    local msg = ("Logged %s run #%d"):format(d.name, DB.runs[d.key])
-    if xp and xp > 0 then msg = msg .. (" (%d trash XP, rested bonus excluded)"):format(xp) end
-    Print(msg .. ".")
+    Print(("Logged %s run #%d."):format(d.name, DB.runs[d.key]))
     if d.tier and DB.runs[d.key] == 1 then
         local done, total = ns.TierProgress(d.tier)
         Print(("%s Spelunker: %d/%d dungeons done."):format(d.tier, done, total))
@@ -554,22 +407,10 @@ function ns.UndoLast()
     if not last then Print("Nothing to undo.") return end
     local d = BY_KEY[last.key]
     DB.runs[last.key] = math.max(0, (DB.runs[last.key] or 1) - 1)
-    local m = DB.measured[last.key]
-    if m and last.xp and last.xp > 0 then
-        for i = #m, 1, -1 do
-            if m[i] == last.xp then table.remove(m, i) break end
-        end
-    end
-    local c = DB.cycle and DB.cycle[last.key]
-    if c and last.gap then
-        for i = #c, 1, -1 do
-            if c[i] == last.gap then table.remove(c, i) break end
-        end
-    end
-    DB.lastRunStart = nil
     Print(("Removed the last %s run."):format(d and d.name or last.key))
     if ns.Refresh then ns.Refresh() end
 end
+
 
 local function InPartyInstance()
     local inInstance, instanceType = IsInInstance()
@@ -595,7 +436,7 @@ local function FinishRun()
     if run.xp <= 0 and duration < 600 then return end -- too short to count (zoned in and out)
     local d = ResolveRun(run)
     if d then
-        ns.RecordRun(d, run.xp, run.level, run.start, run.reentry ~= nil)
+        ns.RecordRun(d, run.xp, run.level)
     else
         DB.pending = run
         Print(("Finished a run in %s but couldn't tell which wing. Type |cffffff00/dlc assign <dungeon>|r (e.g. /dlc assign smlib)."):format(run.instance))
@@ -820,7 +661,6 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
             InitDB()
             -- Horde or Alliance route (S.faction overrides, set with /dlc faction).
             ns.BuildRoute(S.faction or UnitFactionGroup("player"))
-            ns.DropMergedRuns()
             SnapshotXP()
             if ns.CreateUI then ns.CreateUI() end
             if ns.CreateMinimapButton then ns.CreateMinimapButton() end

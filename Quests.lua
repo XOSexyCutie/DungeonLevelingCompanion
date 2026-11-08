@@ -159,15 +159,6 @@ function ns.DungeonQuests(d)
     return out
 end
 
--- How many of d's quests still give XP. Finished quests (tracked or /dlc qdone) don't count.
--- Dungeons whose quests aren't known yet (TBD) count their estimate until the first run.
-function ns.QuestsLeft(d)
-    if d.questPlaceholder and #(d.questInfo or {}) == 0 then
-        return ((ns.DB.runs[d.key] or 0) == 0) and (d.quests or 0) or 0
-    end
-    return #ns.DungeonQuests(d)
-end
-
 ---------------------------------------------------------------------------
 -- Prerequisite steps
 ---------------------------------------------------------------------------
