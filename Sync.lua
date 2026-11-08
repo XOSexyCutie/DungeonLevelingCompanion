@@ -8,6 +8,7 @@ local _, ns = ...
 --   codes: one digit per quest in that dungeon's questList: 0 done/not needed, 1 needs to pick
 --   up, 2 in log, 3 ready to turn in. Both sides use the same Data.lua list (same faction).
 -- "R" asks everyone in the group to send theirs.
+-- "X" says the sender just reset the instance (ends members' runs if they're outside).
 
 local PREFIX = "DLCSYNC"
 local PROTO = 1
@@ -87,6 +88,11 @@ local function MaybeSend(force)
     if Send(msg) then lastMsg, lastSent, sendQueued = msg, now, false end
 end
 function ns.SyncNow() MaybeSend(true) end
+
+-- We reset the instance: tell the group, since only the leader sees the reset message.
+function ns.SyncReset()
+    if Enabled() and not InCombatLockdown() then Send("X") end
+end
 
 local function Parse(sender, msg)
     local f = {}
@@ -191,7 +197,9 @@ f:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender)
         local ok = pcall(function()
             local name = Ambiguate and Ambiguate(sender, "none") or sender
             if name == UnitName("player") then return end
-            if msg == "R" then
+            if msg == "X" then
+                if ns.OnGroupReset then ns.OnGroupReset() end
+            elseif msg == "R" then
                 lastMsg = nil -- someone new: send ours even if unchanged
                 C_Timer.After(1 + math.random() * 2, function() MaybeSend(true) end)
             else

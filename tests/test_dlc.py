@@ -717,4 +717,51 @@ run('state.faction = "Horde"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction aut
 check("Horde RFK leg has no bag bonus yet", abs(base_rfk - ns.BY_KEY.rfk.quests * 26 * 125 * 1.25) < 1e-6, base_rfk)
 check("Horde Excavation leg gets the bag bonus", abs(base_exc / (ns.BY_KEY.exc.quests * 28 * 125 * 1.25) - 1.03) < 1e-9, base_exc)
 check("no errors", not take("errors"))
+
+# --- Back-to-back runs ---
+run('state.faction = "Alliance"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
+def sfk(): return list((G.DungeonLevelingCompanionDB.measured.sfk or {}).values()) if G.DungeonLevelingCompanionDB.measured.sfk else []
+def enter(): run('state.inInstance = true; state.instName = "Shadowfang Keep"; fire("ZONE_CHANGED_NEW_AREA"); tick()')
+def leave(): run('state.t = state.t + 60; state.inInstance = false; state.instName = nil; fire("ZONE_CHANGED_NEW_AREA"); tick()')
+run('DungeonLevelingCompanionDB.measured.sfk = nil; DungeonLevelingCompanionDB.curRun = nil; DungeonLevelingCompanionDB.lastRunStart = nil;'
+    'state.level = 21; state.xp = 0; state.rested = 0; fire("PLAYER_XP_UPDATE", "player")')
+# run 1, someone else resets while we're outside, run 2 starts within the grace period
+enter(); run('kill(3000); fire("ENCOUNTER_END", 1, "Rethilgore", 1, 5, 1); kill(2000); fire("ENCOUNTER_END", 9, "Arugal", 1, 5, 1)')
+leave(); run('state.t = state.t + 120'); enter()
+run('kill(4000)'); take("chat")
+run('fire("ENCOUNTER_END", 1, "Rethilgore", 1, 5, 1)')
+check("same boss twice -> first run logged at re-entry", sfk() == [5000], sfk())
+run('kill(1000)'); leave(); run('state.t = state.t + 400; tick()')
+check("second run logged with its own XP", sfk() == [5000, 5000], sfk())
+# a wipe re-pull of the same boss without leaving doesn't split
+enter(); run('kill(500); fire("ENCOUNTER_END", 1, "Rethilgore", 1, 5, 0); fire("ENCOUNTER_END", 1, "Rethilgore", 1, 5, 1); kill(500)')
+check("failed + successful pull is still one run", G.DungeonLevelingCompanionDB.curRun.xp == 1000, G.DungeonLevelingCompanionDB.curRun.xp)
+# group member resets -> run ends right away via sync
+leave(); take("chat")
+run('state.inGroup = true; state.party.Bob = true; fire("CHAT_MSG_ADDON", "DLCSYNC", "X", "PARTY", "Bob")')
+check("reset from a group member ends the run", G.DungeonLevelingCompanionDB.curRun is None and any("Logged Shadowfang" in m for m in take("chat")))
+# we reset -> group is told
+enter(); run('kill(800)'); leave(); run('state.sent = {}; fire("CHAT_MSG_SYSTEM", "Shadowfang Keep has been reset.")')
+sent = [G.state.sent[i][2] for i in range(1, len(G.state.sent) + 1)]
+check("our reset is sent to the group", "X" in sent and G.DungeonLevelingCompanionDB.curRun is None, sent)
+# re-entered run far above the estimate isn't used
+run('DungeonLevelingCompanionDB.measured.sfk = nil'); enter(); run('kill(100)'); leave(); run('state.t = state.t + 60'); enter()
+run('kill(25000)'); leave(); run('state.t = state.t + 400; tick()')
+check("merged-looking re-entered run not used for estimates", sfk() == [], sfk())
+# one-time cleanup of old merged runs
+run('DungeonLevelingCompanionDB.mergedCleanup = nil; DungeonLevelingCompanionDB.measured.sfk = { 4015, 19869 }; DungeonLevelingCompanionDB.measured.stocks = { 29941 }; DungeonLevelingCompanionDB.measured.bfd = { 12133 }')
+ns.DropMergedRuns()
+m = G.DungeonLevelingCompanionDB.measured
+check("cleanup drops merged SFK/Stockade runs, keeps normal ones",
+      list(m.sfk.values()) == [4015] and len(m.stocks) == 0 and list(m.bfd.values()) == [12133], (list(m.sfk.values()), len(m.stocks)))
+run('DungeonLevelingCompanionDB.measured.stocks = { 29941 }'); ns.DropMergedRuns()
+check("cleanup only runs once", len(G.DungeonLevelingCompanionDB.measured.stocks) == 1)
+# Wowhead quest lists for the new dungeons
+qn = lambda k: [q.name for q in ns.BY_KEY[k].questInfo.values()]
+check("Drowned City Alliance quests from Wowhead", len(qn("drowned")) == 5 and "Magics of the Drowned City" in qn("drowned"), qn("drowned"))
+check("Krol'dok Alliance quests + A Small Favor prep", len(qn("krol")) == 8 and ns.BY_KEY.krol.prep[1].id == 94907, qn("krol"))
+run('state.faction = "Horde"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
+check("Drowned City Horde quests from Wowhead", "The Drowned City" in qn("drowned") and len(qn("drowned")) == 5, qn("drowned"))
+check("Shaper's Terrace still TBD", ns.BY_KEY.shaper.questPlaceholder and len(qn("shaper")) == 0)
+check("no errors", not take("errors"))
 print("\nFAILURES:", fails)

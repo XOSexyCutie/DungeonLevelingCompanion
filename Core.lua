@@ -490,7 +490,37 @@ end
 -- (breaks, logging off) and dungeon swaps aren't measured.
 local MIN_CYCLE, MAX_CYCLE = 5 * 60, 2 * 3600
 
-function ns.RecordRun(d, xp, level, start)
+-- A run this far above its estimate after walking back in is almost surely two clears merged
+-- (the instance was reset by someone else, so we never saw the reset message).
+local MERGED_RATIO = 1.6
+local function LooksMerged(d, xp)
+    local ref = math.max(Baseline(d), Avg(DB.measured[d.key], RECENT_RUNS) or 0)
+    return ref > 0 and xp > ref * MERGED_RATIO
+end
+
+-- One-time cleanup of runs logged before 1.4.0, when back-to-back clears could merge into one.
+function ns.DropMergedRuns()
+    if DB.mergedCleanup then return end
+    DB.mergedCleanup = 1
+    for _, d in ipairs(ROUTE) do
+        local m = DB.measured[d.key]
+        if m then
+            local ref = Baseline(d)
+            for i = #m, 1, -1 do
+                if ref > 0 and m[i] > ref * MERGED_RATIO then
+                    Print(("Dropped a %d XP %s run from the estimates (looks like back-to-back runs counted as one)."):format(m[i], d.name))
+                    table.remove(m, i)
+                end
+            end
+        end
+    end
+end
+
+function ns.RecordRun(d, xp, level, start, reentered)
+    if xp and xp > 0 and reentered and LooksMerged(d, xp) then
+        Print(("%s: %d XP looks like more than one run (instance reset without us seeing it) - not used for estimates."):format(d.name, xp))
+        xp = 0
+    end
     DB.runs[d.key] = (DB.runs[d.key] or 0) + 1
     local gap
     local last = DB.lastRunStart
@@ -565,7 +595,7 @@ local function FinishRun()
     if run.xp <= 0 and duration < 600 then return end -- too short to count (zoned in and out)
     local d = ResolveRun(run)
     if d then
-        ns.RecordRun(d, run.xp, run.level, run.start)
+        ns.RecordRun(d, run.xp, run.level, run.start, run.reentry ~= nil)
     else
         DB.pending = run
         Print(("Finished a run in %s but couldn't tell which wing. Type |cffffff00/dlc assign <dungeon>|r (e.g. /dlc assign smlib)."):format(run.instance))
@@ -578,7 +608,10 @@ local function CheckInstance()
     if name then
         if run and run.instance ~= name then FinishRun() run = nil end
         if run then
-            run.leftAt = nil -- back inside within the grace period: same run
+            -- Back inside within the grace period: same run, unless a boss dies twice (see
+            -- OnEncounterEnd). Remember where we walked back in, in case it was a reset.
+            if run.leftAt then run.reentry = { xp = run.xp, t = time() } end
+            run.leftAt = nil
         else
             DB.curRun = { instance = name, start = time(), xp = 0, level = UnitLevel("player"), subzones = {} }
         end
@@ -597,7 +630,34 @@ end
 
 local function OnSystemMessage(msg)
     local run = DB.curRun
-    if run and run.leftAt and msg and msg:lower():find("has been reset", 1, true) then FinishRun() end
+    if run and run.leftAt and msg and msg:lower():find("has been reset", 1, true) then
+        FinishRun()
+        if ns.SyncReset then ns.SyncReset() end -- only the leader sees this message: tell the group
+    end
+end
+
+-- A group member reset the instance (via sync): end our run if we're outside.
+function ns.OnGroupReset()
+    local run = DB and DB.curRun
+    if run and run.leftAt then FinishRun() end
+end
+
+-- The same boss dying twice in one run means the instance was reset while we were out:
+-- split the run where we walked back in.
+local function OnEncounterEnd(encounterID, success)
+    local run = DB.curRun
+    if not run or run.leftAt or success ~= 1 or not encounterID then return end
+    run.bosses = run.bosses or {}
+    if run.bosses[encounterID] and run.reentry then
+        local re = run.reentry
+        local second = { instance = run.instance, start = re.t, xp = math.max(0, run.xp - re.xp),
+                         level = run.level, subzones = run.subzones, bosses = { [encounterID] = true } }
+        run.xp, run.leftAt, run.reentry = re.xp, re.t, nil
+        FinishRun()
+        DB.curRun = second
+    else
+        run.bosses[encounterID] = true
+    end
 end
 
 -- Run XP comes from the XP bar, not combat chat (which can be secret in combat):
@@ -752,13 +812,15 @@ ev:RegisterEvent("PLAYER_REGEN_ENABLED")
 ev:RegisterEvent("CHAT_MSG_SYSTEM")
 ev:RegisterEvent("UNIT_AURA")
 ev:RegisterEvent("BAG_UPDATE_DELAYED")
+pcall(ev.RegisterEvent, ev, "ENCOUNTER_END")
 
-ev:SetScript("OnEvent", function(_, event, arg1, arg2)
+ev:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
     if event == "ADDON_LOADED" then
         if arg1 == ADDON then
             InitDB()
             -- Horde or Alliance route (S.faction overrides, set with /dlc faction).
             ns.BuildRoute(S.faction or UnitFactionGroup("player"))
+            ns.DropMergedRuns()
             SnapshotXP()
             if ns.CreateUI then ns.CreateUI() end
             if ns.CreateMinimapButton then ns.CreateMinimapButton() end
@@ -785,6 +847,10 @@ ev:SetScript("OnEvent", function(_, event, arg1, arg2)
     elseif event == "CHAT_MSG_SYSTEM" then
         -- Only matters right after leaving a dungeon (instance reset ends the run).
         if DB.curRun and DB.curRun.leftAt then pcall(OnSystemMessage, arg1) end -- text can be secret
+        return
+    elseif event == "ENCOUNTER_END" then
+        local _, _, success = ... -- encounterID, name, difficulty, groupSize, success
+        pcall(OnEncounterEnd, arg1, success) -- values can be secret
         return
     end
     if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then

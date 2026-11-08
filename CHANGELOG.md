@@ -1,5 +1,14 @@
 # DLC – Dungeon Leveling Companion Changelog
 
+## 1.4.0
+
+- Dungeon quests from Wowhead's live Forever data (1.60.1): The Drowned City (5 per faction), Krol'dok Stronghold (8 Alliance, 5 Horde), Alcaz Prison (Alliance: The Dragon's Journal) and Blackmaw Hold (1 per faction), with quest IDs.
+- New prerequisites (Alliance): A Small Favor before Krol'dok's Tome of Twilight, Beneath Nordrassil before Blackmaw's Get to the Roots of It.
+- Shaper's Terrace and Alcaz Prison (Horde) quests are still unknown on Wowhead and keep the estimate.
+- Back-to-back runs no longer merge into one: killing the same boss twice splits the run where you walked back in, and the player who resets the instance tells the group (only they see the reset message).
+- A run that is far above its estimate after walking back in isn't used for XP estimates. Runs merged this way before 1.4.0 are dropped once on login.
+- Pre-launch wording removed from the new dungeon notes.
+
 ## 1.3.0
 
 - City of Dalaran, The Drowned City, Krol'dok Stronghold, Alcaz Prison, Blackmaw Hold and Shaper's Terrace are marked as live at the November 4 launch (the old "if not live" fallback notes are gone).
