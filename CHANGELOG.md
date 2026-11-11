@@ -1,10 +1,12 @@
 # DLC – Dungeon Leveling Companion Changelog
 
-## Unreleased
+## 1.7.0
 
 - New Forever quests in Classic dungeons from Wowhead: Deadmines (Destruction in Deadmines), Ruins of Lordaeron (Friend of the Kirin Tor / Shrewd Negotiations), Excavation Site (Seeking Caitlin, Fallen in the Fen, Heartwoven, Prehistoric Prism / Earthen Echo), SM Library (Past Due), RFD (The Coldbringer's Eye, Agamaggan's Blood), Zul'Farrak (The Witch Doctor's Head / Zum'rah's Head), Maraudon (Rot and Regret, An'she's Radiance), BRD (Fragment of the Firelands) and LBRS (Blood and Thunder).
 - Missing Classic quests added: The Crone of the Kraul (RFK, Alliance), Grime-Encrusted Ring (Gnomeregan, Alliance), Trouble in the Deeps (BFD, Horde).
 - Fixed: Horde Uldaman shows Necklace Recovery instead of the Alliance-only The Shattered Necklace.
+- Blackmaw Hold quests from Wowhead (now 8 per faction): The Twin Bears, Claws That Rend, Tusks that Gore, Feeding Time!, A Lost Memento, Blackmaw Pouches and Blackmaw Reclamation for both factions; Horde gets Get to the Roots of It (with Beneath Nordrassil in Next) and Alliance gets Blackmaw Magic.
+- Krol'dok Stronghold: Krol'dok No More! (Alliance escort).
 
 ## 1.6.0
 

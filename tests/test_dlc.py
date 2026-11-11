@@ -697,9 +697,11 @@ check("no errors", not take("errors"))
 # Wowhead quest lists for the new dungeons
 qn = lambda k: [q.name for q in ns.BY_KEY[k].questInfo.values()]
 check("Drowned City Alliance quests from Wowhead", len(qn("drowned")) == 5 and "Magics of the Drowned City" in qn("drowned"), qn("drowned"))
-check("Krol'dok Alliance quests + A Small Favor prep", len(qn("krol")) == 8 and ns.BY_KEY.krol.prep[1].id == 94907, qn("krol"))
+check("Krol'dok Alliance quests + A Small Favor prep", len(qn("krol")) == 9 and ns.BY_KEY.krol.prep[1].id == 94907, qn("krol"))
+check("Blackmaw Alliance quests from Wowhead", len(qn("blackmaw")) == 8 and "Blackmaw Magic" in qn("blackmaw"), qn("blackmaw"))
 run('state.faction = "Horde"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
 check("Drowned City Horde quests from Wowhead", "The Drowned City" in qn("drowned") and len(qn("drowned")) == 5, qn("drowned"))
+check("Blackmaw Horde quests + Beneath Nordrassil prep", len(qn("blackmaw")) == 8 and "Get to the Roots of It" in qn("blackmaw") and ns.BY_KEY.blackmaw.prep[1].q == "Beneath Nordrassil", qn("blackmaw"))
 check("Shaper's Terrace still TBD", ns.BY_KEY.shaper.questPlaceholder and len(qn("shaper")) == 0)
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)
