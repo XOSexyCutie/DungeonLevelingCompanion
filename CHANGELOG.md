@@ -1,5 +1,11 @@
 # DLC – Dungeon Leveling Companion Changelog
 
+## Unreleased
+
+- New Forever quests in Classic dungeons from Wowhead: Deadmines (Destruction in Deadmines), Ruins of Lordaeron (Friend of the Kirin Tor / Shrewd Negotiations), Excavation Site (Seeking Caitlin, Fallen in the Fen, Heartwoven, Prehistoric Prism / Earthen Echo), SM Library (Past Due), RFD (The Coldbringer's Eye, Agamaggan's Blood), Zul'Farrak (The Witch Doctor's Head / Zum'rah's Head), Maraudon (Rot and Regret, An'she's Radiance), BRD (Fragment of the Firelands) and LBRS (Blood and Thunder).
+- Missing Classic quests added: The Crone of the Kraul (RFK, Alliance), Grime-Encrusted Ring (Gnomeregan, Alliance), Trouble in the Deeps (BFD, Horde).
+- Fixed: Horde Uldaman shows Necklace Recovery instead of the Alliance-only The Shattered Necklace.
+
 ## 1.6.0
 
 - Alcaz Prison quests from Wowhead for both factions (Alliance 7, Horde 9), with quest IDs. Horde no longer shows "Quests TBD".

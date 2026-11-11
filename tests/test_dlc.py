@@ -255,8 +255,8 @@ def qlog():
 run('state.level = 17; state.xp = 0; state.inInstance = false')
 qlog()
 q = panel_quests(); print("\n".join(q))
-check("17 -> Next: Deadmines at 18 with its 6 quests, all 'not picked up'", any("Next:" in l and "The Deadmines" in l and "at 18" in l for l in G.state.lastText.split("\n"))
-      and q and q[0].startswith("Dungeon quests (6 left)") and all("cff999999" in l for l in q[1:]), q[:1])
+check("17 -> Next: Deadmines at 18 with its 7 quests, all 'not picked up'", any("Next:" in l and "The Deadmines" in l and "at 18" in l for l in G.state.lastText.split("\n"))
+      and q and q[0].startswith("Dungeon quests (7 left)") and all("cff999999" in l for l in q[1:]), q[:1])
 run('state.questLog = { { title = "Red Silk Bandanas", id = 214, complete = false, have = 3, need = 10 },'
     ' { title = "Oh Brother. . .", id = 167, complete = true },'
     ' { title = "The Defias Brotherhood", id = 155, complete = false } }')
@@ -266,7 +266,7 @@ check("complete quest shows 'turn in'", any("Oh Brother. . . - turn in" in l for
 # turn in Oh Brother
 run('table.remove(state.questLog, 2); state.flagged[167] = true; fire("QUEST_TURNED_IN", 167, 1200, 0); qlog_dummy = 1')
 qlog(); q = panel_quests()
-check("turned-in quest disappears", not any("Oh Brother" in l for l in q) and "(5 left)" in q[0], q[:1])
+check("turned-in quest disappears", not any("Oh Brother" in l for l in q) and "(6 left)" in q[0], q[:1])
 # Defias chain: turn in part (155), then next part with same name (156)
 run('table.remove(state.questLog, 2); state.flagged[155] = true; fire("QUEST_TURNED_IN", 155, 500, 0)'); qlog()
 print("   (Defias dungeon quest stays listed until its final part, id 166, is done)")
