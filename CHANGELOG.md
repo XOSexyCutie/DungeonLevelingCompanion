@@ -1,5 +1,12 @@
 # DLC – Dungeon Leveling Companion Changelog
 
+## 1.6.0
+
+- Alcaz Prison quests from Wowhead for both factions (Alliance 7, Horde 9), with quest IDs. Horde no longer shows "Quests TBD".
+- Alcaz Prison prequests in Next: the SI:7 chain for Alliance (Our Man in Theramore > Watch Yer Back > The Return of the King?) and the Kor'kron chain for Horde (The Missing Kor'kron > The Elite of the Elite > Right Place, Wrong Time).
+- Fixed: Vorrel's Revenge (SM Graveyard) and Gnomer-gooooone! (Gnomeregan) no longer show for Alliance - both are Horde-only.
+- Lost Relic Carry (Excavation Site) works now; removed the "bugged in beta" note.
+
 ## 1.5.0
 
 Reworked for alts leveling with pugs instead of a premade group running one dungeon over and over.
