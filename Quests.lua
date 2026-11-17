@@ -15,6 +15,9 @@ local function Trim(s)
     return t
 end
 
+local CLASS_TOKENS = { druid = "DRUID", hunter = "HUNTER", mage = "MAGE", paladin = "PALADIN", priest = "PRIEST",
+                       rogue = "ROGUE", shaman = "SHAMAN", warlock = "WARLOCK", warrior = "WARRIOR" }
+
 -- Turn Data.lua's "Quest Name (giver/where) [id]" strings into { name, from, key, id, class }.
 -- Placeholders (TBD etc.) are skipped. Runs again whenever the route is rebuilt for a faction.
 function ns.PrepareQuests()
@@ -30,7 +33,9 @@ function ns.PrepareQuests()
             if placeholder then
                 d.questPlaceholder = true
             else
-                local class = from and from:lower():find("paladin", 1, true) and "PALADIN" or nil
+                -- "(<class> only ...)" marks a class quest; it's hidden for every other class.
+                local class = from and from:lower():match("^(%a+) only")
+                class = class and CLASS_TOKENS[class] or nil
                 table.insert(d.questInfo, { name = name, from = from, key = Key(name), id = id, class = class })
             end
         end

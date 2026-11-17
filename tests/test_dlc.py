@@ -703,5 +703,19 @@ run('state.faction = "Horde"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction aut
 check("Drowned City Horde quests from Wowhead", "The Drowned City" in qn("drowned") and len(qn("drowned")) == 5, qn("drowned"))
 check("Blackmaw Horde quests + Beneath Nordrassil prep", len(qn("blackmaw")) == 8 and "Get to the Roots of It" in qn("blackmaw") and ns.BY_KEY.blackmaw.prep[1].q == "Beneath Nordrassil", qn("blackmaw"))
 check("Shaper's Terrace still TBD", ns.BY_KEY.shaper.questPlaceholder and len(qn("shaper")) == 0)
+
+# Sunken Temple: class quests show only for their class; Haze of Evil is Alliance-only.
+shown = lambda k: [q.name for q in ns.DungeonQuests(ns.BY_KEY[k]).values()]
+run('state.class = "SHAMAN"')
+check("ST Horde shaman sees Da Voodoo only", "Da Voodoo" in shown("st") and "The Green Drake" not in shown("st")
+      and "Forging the Mightstone" not in shown("st") and "Haze of Evil" not in shown("st"), shown("st"))
+run('state.faction = "Alliance"; SlashCmdList.DUNGEONLEVELINGCOMPANION("faction auto")'); take("chat")
+run('state.class = "HUNTER"')
+check("ST Alliance hunter sees Haze of Evil + The Green Drake", "Haze of Evil" in shown("st") and "The Green Drake" in shown("st")
+      and "Da Voodoo" not in shown("st"), shown("st"))
+check("ST prep has the optional Haze of Evil chain", [s.q for s in ns.BY_KEY.st.prep.values()][-2:] == ["Muigin and Larion", "A Visit to Gregan"])
+run('state.class = "MAGE"')
+check("Mage class quests in other dungeons", "Rituals of Power" in shown("smlib") and "Power in Uldaman" in shown("ulda")
+      and "Arcane Refreshment" in shown("dme"), shown("smlib"))
 check("no errors", not take("errors"))
 print("\nFAILURES:", fails)

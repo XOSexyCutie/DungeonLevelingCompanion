@@ -1,5 +1,12 @@
 # DLC – Dungeon Leveling Companion Changelog
 
+## 1.8.0
+
+- Sunken Temple: Haze of Evil (Alliance), with Muigin and Larion > A Visit to Gregan as optional prequests in Next. Quest IDs added for the other Sunken Temple quests.
+- Sunken Temple class quests for all nine classes (A Better Ingredient, The Green Drake, Destroy Morphaz, Forging the Mightstone, Blood of Morphaz, The Azure Key, Da Voodoo, Trolls of a Feather, Voodoo Feathers). Each one only shows for its own class.
+- Other class quests: Rituals of Power (SM Library, mage), Power in Uldaman (mage), Arcane Refreshment (Dire Maul East, mage), The Orb of Soran'ruk (Shadowfang Keep, Horde warlock).
+- Missing quests from Wowhead's "Every Dungeon Quest" guide: Gnomeregan (Return of the Ring, The Sparklematic 5200!), Uldaman (The Lost Tablets of Will, Alliance), BRD (A Taste of Flame; Jail Break! for Alliance; The Rise of the Machines, Operation: Death to Angerforge and The Royal Rescue for Horde), Dire Maul East (Shards of the Felvine).
+
 ## 1.7.0
 
 - New Forever quests in Classic dungeons from Wowhead: Deadmines (Destruction in Deadmines), Ruins of Lordaeron (Friend of the Kirin Tor / Shrewd Negotiations), Excavation Site (Seeking Caitlin, Fallen in the Fen, Heartwoven, Prehistoric Prism / Earthen Echo), SM Library (Past Due), RFD (The Coldbringer's Eye, Agamaggan's Blood), Zul'Farrak (The Witch Doctor's Head / Zum'rah's Head), Maraudon (Rot and Regret, An'she's Radiance), BRD (Fragment of the Firelands) and LBRS (Blood and Thunder).
